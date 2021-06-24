@@ -17,4 +17,4 @@ author: JoneY
 
 <!-- ![加油](https://github.com/zhoushiyang12/zhoushiyang12.github.io/blob/main/images/2021-06-24-My_first_blog_with_jekyll/jiayou.jpg) -->
 
-![加油](images/2021-06-24-My_first_blog_with_jekyll/jiayou.jpg)
+![加油](/images/2021-06-24-My_first_blog_with_jekyll/jiayou.jpg)
