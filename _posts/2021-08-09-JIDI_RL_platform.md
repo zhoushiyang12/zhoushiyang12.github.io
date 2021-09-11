@@ -1,16 +1,17 @@
 ---
 layout: post
 title: "JIDI强化学习平台"
-date:   2021-06-24
+date:   2021-08-24
 tags: [study-RL]
 comments: true
 author: JoneY
 ---
 
-今天从RL_china的公众号看到一个JIDI的强化学习平台。包好许多的强化学习的环境和学习资料。感觉挺棒的，收藏起来，慢慢学习
+今天从 [RL_china](http://rlchina.org/index.html) 的公众号看到一个JIDI的强化学习平台。包好许多的强化学习的环境和学习资料。感觉挺棒的，收藏起来，好好学习。
+ 
 <!-- more -->
 
-## RL_china学习
+## RL_china学习[URL](http://rlchina.org/index.html)
 
 
 平台上科目中，通过参与者数量和智能体数量将强化学习的问题分为：单方但智能体、多方单智能体、单方多智能体和多方多智能体。
@@ -71,3 +72,32 @@ Paradigms:
 Summary:
 
 ![Summary](/images/2021-08-09-JIDI_RL_platform/4.png)
+
+Future：
+
+基于模型的MARL
+
+
+* * *
+### [RLChina 2021]第13课 多智能体前沿（一）  吴翼---捉迷藏游戏策略和开放问题
+
+Hidden seek
+RPG 奖励随机化--->Fine tune
+寻找各种不同的策略 合作-不合作
+--Monster-Hunt 离散  共同抓住才算抓住（类似IGSAIL）
+--Agar.io 球球大作战2人
+
+
+* * *
+### [RLChina 2021]创业日 创始人专场
+ 俞扬 决策算法---南栖仙策
+
+ offline RL -------> 数据驱动、0试错、少交互
+ 
+ 工控、汽车研发、
+
+王一君-供应链 览众数据CEO
+
+![Summary](/images/2021-08-09-JIDI_RL_platform/5.png)
+
+![Summary](/images/2021-08-09-JIDI_RL_platform/6.png)
