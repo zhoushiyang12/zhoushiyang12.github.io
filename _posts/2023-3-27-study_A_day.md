@@ -2,7 +2,7 @@
 layout: post
 title: "瞎整腾的一天"
 date:   2023-3-27
-tags: [学习][记录]
+tags: [学习]
 comments: true
 author: JoneY
 ---

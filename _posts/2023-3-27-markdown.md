@@ -238,15 +238,18 @@ Markdown区块引用是在段落开头使用>符号，然后后面紧跟一个�
     [链接名称](链接地址)
     或者
     <链接地址>
+【注意】：圆括号内的内容是隐藏的，尖括号内的内容是会显示的
 
 例如：
 
     这是一个链接 [新浪新闻](https://news.sina.com.cn/)
+
     <https://news.sina.com.cn/>
 
 显示效果如下：
 
 这是一个链接 [新浪新闻](https://news.sina.com.cn/)
+
 <https://news.sina.com.cn/>
 
 
@@ -313,10 +316,10 @@ Markdown图片语法格式为：
 
 显示效果：
 
-<img src="/images/2023-3-27-markdown/logo.png" width=40%>
+<img src="/images/2023-3-27-markdown/logo.png"  width=40%>
 
 ---
 # 参考地址：
-菜鸟教程：https://www.runoob.com/markdown/md-tutorial.html
+菜鸟教程：<https://www.runoob.com/markdown/md-tutorial.html>
 
-知乎详解：https://zhuanlan.zhihu.com/p/108984311
+知乎详解：<https://www.runoob.com/markdown/md-tutorial.html>

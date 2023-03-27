@@ -2,7 +2,7 @@
 layout: post
 title: "JIDI强化学习平台"
 date:   2021-08-24
-tags: [study-RL]
+tags: [学习]
 comments: true
 author: JoneY
 ---

@@ -2,7 +2,7 @@
 layout: post
 title: "我的第一个博客"
 date:   2021-06-24
-tags: [Other]
+tags: [其他]
 comments: true
 author: JoneY
 ---
