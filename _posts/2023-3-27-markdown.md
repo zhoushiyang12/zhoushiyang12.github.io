@@ -8,23 +8,20 @@ author: JoneY
 ---
 
 Markdown使用#、+、*等符号来标记,是一种轻量级标记语言，它允许人们使用易读易写的纯文本格式编写文档。
-
 Markdown 语言在 2004 由约翰·格鲁伯（英语：John Gruber）创建。
-
 Markdown 编写的文档可以导出 HTML 、Word、图像、PDF、Epub 等多种格式的文档。
-
 Markdown 编写的文档后缀为 .md, .markdown。
-
 Markdown 能被使用来撰写电子书，如：Gitbook。
-
 当前许多网站都广泛使用 Markdown 来撰写帮助文档或是用于论坛上发表消息。例如：GitHub、简书、reddit、Diaspora、Stack Exchange、OpenStreetMap 、SourceForge等。
 
+---
  
 <!-- more -->
 
 # 1、标题
 
 Markdown 标题支持两种形式： 
+
 1、用#标记
 
 在 标题开头 加上1~6个#，依次代表一级标题、二级标题....六级标题
@@ -44,6 +41,7 @@ Markdown 标题支持两种形式：
 ##### 四级标题
 ###### 五级标题
 ###### 六级标题
+
 
 2、用=和-标记
 
@@ -209,7 +207,7 @@ Markdown脚注的格式如下：
 
 [^要注明的文本]：
 
-四、Markdown区块
+# 四、Markdown区块
 
 Markdown区块引用是在段落开头使用>符号，然后后面紧跟一个空格符号：
 
@@ -237,9 +235,9 @@ Markdown区块引用是在段落开头使用>符号，然后后面紧跟一个�
 
 链接使用方法如下：
 
-[链接名称](链接地址)
-或者
-<链接地址>
+    [链接名称](链接地址)
+    或者
+    <链接地址>
 
 例如：
 
@@ -273,7 +271,7 @@ Markdown区块引用是在段落开头使用>符号，然后后面紧跟一个�
 [markdown]: http://www.markdown.com 
 
 
-六、Markdown图片
+# 六、Markdown图片
 
 Markdown图片语法格式为：
 

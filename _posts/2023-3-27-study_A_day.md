@@ -2,7 +2,7 @@
 layout: post
 title: "瞎整腾的一天"
 date:   2023-3-27
-tags: [other]
+tags: [学习][记录]
 comments: true
 author: JoneY
 ---
@@ -13,8 +13,11 @@ author: JoneY
 
 
 尝试
-图虫图片分享
+
++ 图虫图片分享
 https://tuchong.com/1724508/121490573/?user_id=1724508
+
++ 图床管理工具—PicGo 
 
 
 <!-- more -->
