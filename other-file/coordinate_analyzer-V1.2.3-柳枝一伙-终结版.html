@@ -1,0 +1,3032 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>坐标统计与分类</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #fff8f0;
+    --panel-bg: #ffffff;
+    --sidebar-bg: #fffefb;
+    --border: #fde0c0;
+    --text: #3d2817;
+    --text-muted: #92725a;
+    --primary: #ef4444;      /* 红 */
+    --primary-dark: #dc2626;
+    --accent: #f59e0b;       /* 黄/橙 */
+    --accent-dark: #d97706;
+    --success: #16a34a;
+    --info: #0ea5e9;
+    --danger: #e11d48;
+    --canvas-bg: #fffcf5;
+    --shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+  }
+  body {
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ============ 侧边栏 ============ */
+  .sidebar {
+    width: 360px;
+    background: var(--sidebar-bg);
+    border-right: 2px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    box-shadow: 2px 0 12px rgba(245, 158, 11, 0.1);
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-track { background: var(--bg); }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+  .panel {
+    padding: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .panel h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    color: #fff;
+    font-weight: 600;
+  }
+  .h3-left { flex: 1; }
+  .help-btn {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 1.5px solid rgba(255,255,255,0.7);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .help-btn:hover { background: rgba(255,255,255,0.5); }
+
+  /* 帮助弹窗 */
+  .help-modal-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+  }
+  .help-modal-mask.show { display: flex; }
+  .help-modal {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 480px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    animation: helpPop 0.2s ease-out;
+  }
+  @keyframes helpPop {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+  .help-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border-radius: 12px 12px 0 0;
+    z-index: 1;
+  }
+  .help-modal-header h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #1f2937;
+  }
+  .help-modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #9ca3af;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .help-modal-close:hover { color: #ef4444; }
+  .help-modal-body {
+    padding: 16px 18px;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.7;
+  }
+  .help-modal-body h5 {
+    margin: 14px 0 6px;
+    font-size: 13px;
+    color: #1f2937;
+    border-left: 3px solid #3b82f6;
+    padding-left: 8px;
+  }
+  .help-modal-body h5:first-child { margin-top: 0; }
+  .help-modal-body ul, .help-modal-body ol {
+    margin: 4px 0 8px;
+    padding-left: 20px;
+  }
+  .help-modal-body li { margin: 3px 0; }
+  .help-modal-body code {
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .help-modal-body p { margin: 4px 0; }
+  .help-modal-footer {
+    padding: 10px 18px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 11px;
+    color: #9ca3af;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-radius: 0 0 12px 12px;
+  }
+  .panel:nth-child(1) h3 { background: linear-gradient(135deg, #ef4444, #f87171); }
+  .panel:nth-child(2) h3 { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+  .panel:nth-child(3) h3 { background: linear-gradient(135deg, #16a34a, #4ade80); }
+  .panel:nth-child(4) h3 { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
+  .panel:nth-child(5) h3 { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .form-row label {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: right;
+    font-weight: 500;
+  }
+  .form-row input, .form-row select {
+    width: 100%;
+    padding: 7px 10px;
+    background: #fffef9;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-row input:focus, .form-row select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+  }
+  .form-row-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), #f87171); color: #fff; }
+  .btn-success { background: linear-gradient(135deg, var(--success), #4ade80); color: #fff; }
+  .btn-warning { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; }
+  .btn-danger { background: linear-gradient(135deg, var(--danger), #fb7185); color: #fff; }
+  .btn-secondary { background: linear-gradient(135deg, #64748b, #94a3b8); color: #fff; }
+  .btn-info { background: linear-gradient(135deg, var(--info), #38bdf8); color: #fff; }
+  .btn-purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: #fff; }
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .btn-full { width: 100%; }
+
+  /* 坐标列表 */
+  .coord-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .coord-table th {
+    background: #fef3c7;
+    padding: 6px 4px;
+    text-align: left;
+    color: #92400e;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    border-bottom: 2px solid var(--accent);
+  }
+  .coord-table td {
+    padding: 5px 4px;
+    border-bottom: 1px solid #fef0d8;
+  }
+  .coord-table tr:hover { background: #fef9e7; }
+  .coord-table tr.selected { background: #fee2e2; }
+  .tag-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+    border: 1.5px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+  }
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    font-weight: bold;
+  }
+  .del-btn:hover { transform: scale(1.3); }
+  .table-wrap {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    margin-top: 6px;
+    background: #fff;
+  }
+  .table-wrap::-webkit-scrollbar { width: 5px; }
+  .table-wrap::-webkit-scrollbar-track { background: #fff8f0; }
+  .table-wrap::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+  /* 标签筛选 */
+  .tag-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .tag-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+  }
+  .tag-chip:hover { border-color: var(--accent); }
+  .tag-chip.active {
+    border-color: var(--primary);
+    background: #fef2f2;
+    box-shadow: 0 2px 6px rgba(239,68,68,0.2);
+  }
+  .tag-chip input { margin: 0; cursor: pointer; width: 14px; height: 14px; }
+
+  /* 平均值结果 */
+  .avg-result {
+    background: linear-gradient(135deg, #fefce8, #fffbeb);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+    border-left: 4px solid var(--success);
+    box-shadow: 0 1px 4px rgba(245,158,11,0.1);
+  }
+  .avg-result .tag-title {
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .avg-result .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    color: var(--text-muted);
+  }
+  .avg-result .stat-row span strong { color: var(--text); display: block; font-size: 14px; }
+
+  .btn-icon {
+    width: 24px;
+    height: 24px;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    padding: 0 2px;
+    color: var(--text);
+  }
+  .btn-icon-labeled {
+    width: auto;
+    height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+    gap: 3px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-icon:hover { border-color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .btn-icon-primary { background: linear-gradient(135deg, var(--info), #38bdf8); color: #fff; border-color: transparent; }
+  .btn-icon-primary:hover { box-shadow: 0 2px 6px rgba(14,165,233,0.3); }
+  .btn-icon-danger { background: linear-gradient(135deg, var(--danger), #fb7185); color: #fff; border-color: transparent; }
+  .btn-icon-danger:hover { box-shadow: 0 2px 6px rgba(225,29,72,0.3); }
+
+  /* ============ 右侧画布区 ============ */
+  .canvas-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    min-width: 0;
+  }
+  .canvas-toolbar {
+    padding: 3px 6px;
+    background: linear-gradient(180deg, #fff, #fff8f0);
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-wrap: nowrap;
+    min-height: 30px;
+  }
+  .canvas-toolbar .tool-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding-right: 4px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .canvas-toolbar .tool-group:last-child { border-right: none; }
+  .canvas-toolbar label { font-size: 11px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+  .canvas-toolbar input[type="number"] {
+    width: 46px;
+    padding: 2px 4px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 11px;
+  }
+  .canvas-toolbar input[type="number"]:focus { border-color: var(--primary); }
+  .canvas-toolbar input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--primary); }
+  .canvas-legend {
+    padding: 4px 12px;
+    background: #fff8f0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-height: 24px;
+  }
+  .canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--canvas-bg);
+    min-height: 0;
+  }
+  #mainCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  #mainCanvas:active { cursor: grabbing; }
+
+  /* 状态栏 */
+  .status-bar {
+    padding: 6px 14px;
+    background: var(--sidebar-bg);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .legend {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .legend-clickable {
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .legend-clickable:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .legend-active {
+    font-weight: 600;
+  }
+  .empty-hint {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 12px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--success), #4ade80);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+  }
+  .toast.error { background: linear-gradient(135deg, var(--danger), #fb7185); }
+  .toast.info { background: linear-gradient(135deg, var(--info), #38bdf8); }
+  @keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* 移动端汉堡菜单按钮（默认隐藏） */
+  .menu-toggle {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 200;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), #f87171);
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(239,68,68,0.4);
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 遮罩层（移动端打开侧边栏时） */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 90;
+  }
+  .overlay.show { display: block; }
+
+  /* ============ 移动端响应式 ============ */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    .menu-toggle { display: flex; }
+    .overlay { display: none; }
+    .overlay.show { display: block; }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 88%;
+      max-width: 360px;
+      height: 100%;
+      transform: translateX(-100%);
+      box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+      flex: none;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      flex: 1;
+    }
+    .canvas-toolbar {
+      padding: 4px 6px;
+      gap: 3px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+    .canvas-toolbar .tool-group {
+      flex-shrink: 0;
+      padding-right: 4px;
+      border-right: none;
+    }
+    .btn { padding: 6px 10px; font-size: 11px; }
+    .canvas-toolbar input[type="number"] { width: 40px; }
+    .btn-icon { width: 26px; height: 26px; font-size: 12px; }
+    .btn-icon-labeled { height: 26px; padding: 0 5px; font-size: 10px; }
+    /* 防止按钮行溢出 */
+    .btn-row { gap: 4px; }
+    .btn-row .btn { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .status-bar { font-size: 11px; padding: 4px 10px; }
+
+    .form-row { grid-template-columns: 65px 1fr; }
+    .panel { padding: 12px; }
+    .panel h3 { font-size: 14px; }
+
+    /* 工具栏顶部留出汉堡按钮空间 */
+    .canvas-toolbar { padding-left: 56px; }
+    .canvas-legend { padding-left: 56px; }
+  }
+
+  @media (max-width: 480px) {
+    .sidebar { width: 92%; }
+    .form-row-2col { grid-template-columns: 1fr; }
+  }
+
+  .app-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    font-size: 11px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(239,68,68,0.92), rgba(245,158,11,0.92));
+    border-top: 1px solid rgba(255,255,255,0.3);
+    z-index: 600;
+    pointer-events: none;
+  }
+  .sidebar { padding-bottom: 22px; }
+  .canvas-wrap { padding-bottom: 22px; }
+</style>
+</head>
+<body>
+
+<!-- 版权信息 -->
+<div class="app-footer">©宣化-2026一🔥周仕扬-王兴-杨鑫</div>
+
+<!-- 帮助弹窗 -->
+<div class="help-modal-mask" id="helpModalMask" onclick="if(event.target===this)closeHelp()">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h4 id="helpTitle">🏷 标签筛选与分类 - 使用说明</h4>
+      <button class="help-modal-close" onclick="closeHelp()">×</button>
+    </div>
+    <div class="help-modal-body" id="helpBody">
+      <h5>一、功能概述</h5>
+      <p>按标签筛选显示坐标点，并计算各标签下坐标点的 <strong>平均位置</strong>（中心点）。</p>
+
+      <h5>二、标签筛选区</h5>
+      <ul>
+        <li>每个标签为一个「胶囊」按钮，<em>彩色边框 + 勾选</em> 表示激活</li>
+        <li>括号中数字：该标签下 <strong>未被屏蔽</strong> 的坐标数量</li>
+        <li>点击标签可 <strong>多选</strong>，显示所有 <em>包含任一激活标签</em> 的坐标</li>
+        <li>选中某标签时：<em>自动将该标签下被屏蔽的坐标全部解除屏蔽</em></li>
+      </ul>
+
+      <h5>三、操作按钮</h5>
+      <ul>
+        <li><strong>📊 计算平均位置</strong>：对当前激活标签逐一计算平均坐标 X̅、Ȳ、H̅
+          <ul>
+            <li>结果显示：「n个点中的m个」= 该标签共 n 点，其中未屏蔽参与计算的 m 点</li>
+            <li>图中以 <strong>+ 十字标记</strong> 显示平均点，颜色对应标签色</li>
+            <li>⚠️ <em>当所有坐标被删除后，下方平均位置列表会自动清空</em></li>
+          </ul>
+        </li>
+        <li><strong>🎯 显示/隐藏坐标</strong>：一键切换是否在画布上绘制坐标点（平均点和区域不受影响）</li>
+      </ul>
+
+      <h5>四、平均位置隐藏按钮</h5>
+      <ul>
+        <li>每行平均结果右上角有「◉ 隐藏 / ◌ 显示」按钮，<em>仅控制单个平均点的可见性</em></li>
+        <li>隐藏后：该行文字变淡，图中十字标记消失；再次点击恢复</li>
+        <li>「隐藏/显示」后保留解释文字，便于了解该平均值信息</li>
+      </ul>
+
+      <h5>五、与图例联动</h5>
+      <p>画布顶部图例区的标签也可点击筛选，并会 <strong>自动居中</strong> 显示该标签下所有点。</p>
+    </div>
+    <div class="help-modal-footer" id="helpFooter">©宣化-2026一🔥周仕扬-王兴-杨鑫 | 观察工具箱 v1.0</div>
+  </div>
+</div>
+
+<!-- 移动端汉堡菜单 -->
+<button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+<div class="overlay show" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- ================= 左侧控制面板 ================= -->
+<div class="sidebar open" id="sidebar">
+
+  <!-- 坐标录入 -->
+  <div class="panel">
+    <h3><span class="h3-left">📌 坐标录入</span><button class="help-btn" onclick="showHelp('coord-input')" title="查看帮助">?</button></h3>
+
+    <!-- 录入方式切换（同一行） -->
+    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:3px;">
+      <button class="btn btn-primary" id="tabCoord" onclick="switchInputMode('coord')" style="font-size:11px;padding:5px 2px;">坐标</button>
+      <button class="btn" id="tabP" onclick="switchInputMode('p')" style="font-size:11px;padding:5px 2px;">单偏</button>
+      <button class="btn" id="tabG" onclick="switchInputMode('g')" style="font-size:11px;padding:5px 2px;">单G</button>
+      <button class="btn" id="tabText" onclick="switchInputMode('text')" style="font-size:11px;padding:5px 2px;">文本</button>
+      <button class="btn" id="tabFile" onclick="switchInputMode('file')" style="font-size:11px;padding:5px 2px;">文件</button>
+    </div>
+
+    <!-- 坐标输入面板 -->
+    <div id="inputPanelCoord">
+      <div class="form-row">
+        <label>X</label>
+        <input type="number" id="inputX" step="any" min="0" placeholder="正数">
+      </div>
+      <div class="form-row">
+        <label>Y</label>
+        <input type="number" id="inputY" step="any" min="0" placeholder="正数">
+      </div>
+      <div class="form-row">
+        <label>H (高度)</label>
+        <input type="number" id="inputH" step="any" min="0" placeholder="可选，图中不显示">
+      </div>
+    </div>
+
+    <!-- 文件导入面板 -->
+    <div id="inputPanelFile" style="display:none;">
+      <div class="form-row">
+        <label>文件</label>
+        <input type="file" id="importFile" accept=".txt" style="font-size:11px;">
+      </div>
+    </div>
+
+    <!-- 文本导入面板 -->
+    <div id="inputPanelText" style="display:none;">
+      <div class="form-row" style="grid-template-columns: 1fr;">
+        <textarea id="importTextArea" placeholder="将导出的坐标文本粘贴到此处...
+
+格式示例:
+# 坐标数据导出文件
+1	10000	20000	150	A,B	2026-08-04 12:00:00	0
+2	15000	25000		A	2026-08-04 12:01:00	0
+
+说明: 每行一个坐标，用Tab分隔
+字段: 编号 | X | Y | H | 标签 | 时间戳 | 屏蔽(0/1)
+以#开头的行为注释，会被跳过
+缺失字段默认值: 时间戳=当前时间, 标签=未分类, 屏蔽=0（空或" 0"均视为缺失）"="" style="width:100%;height:180px;font-size:11px;font-family:monospace;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;"></textarea>
+      </div>
+    </div>
+
+    <!-- 单偏输入面板 -->
+    <div id="inputPanelP" style="display:none;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">G点（基准点）</div>
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr 40px 1fr;">
+        <label>Gx</label>
+        <input type="number" id="inputPGx" step="any" placeholder="X">
+        <label>Gy</label>
+        <input type="number" id="inputPGy" step="any" placeholder="Y">
+        <label>Gh</label>
+        <input type="number" id="inputPGh" step="any" placeholder="高程">
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">M点（已知点）</div>
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr 40px 1fr;">
+        <label>Mx</label>
+        <input type="number" id="inputPMx" step="any" placeholder="X">
+        <label>My</label>
+        <input type="number" id="inputPMy" step="any" placeholder="Y">
+        <label>Mh</label>
+        <input type="number" id="inputPMh" step="any" placeholder="高程">
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:6px 0 4px;">偏差量</div>
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr 40px 1fr;">
+        <label>△D</label>
+        <input type="number" id="inputPdD" step="any" placeholder="距离偏差" value="0">
+        <label>△F</label>
+        <input type="number" id="inputPdF" step="any" placeholder="方向偏差(密位)" value="0">
+        <label>△E</label>
+        <input type="number" id="inputPdE" step="any" placeholder="高低偏差" value="0">
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-info" onclick="calcPResult()" style="font-size:11px;width:50%;min-width:120px;">📐 计算坐标</button>
+      </div>
+      <div id="pCalcResult" style="display:none;margin-top:6px;padding:6px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:12px;color:#166534;"></div>
+    </div>
+
+    <!-- 单G输入面板 -->
+    <div id="inputPanelG" style="display:none;">
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr;">
+        <label>Gx</label>
+        <input type="number" id="inputGx" step="any" placeholder="G点X">
+        <label>Gy</label>
+        <input type="number" id="inputGy" step="any" placeholder="G点Y">
+      </div>
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr;">
+        <label>Gh</label>
+        <input type="number" id="inputGh" step="any" placeholder="G点高程">
+        <label>J</label>
+        <input type="number" id="inputJ" step="any" placeholder="基准(密位)">
+      </div>
+      <div class="form-row" style="grid-template-columns: 40px 1fr 40px 1fr 40px 1fr;">
+        <label>D</label>
+        <input type="number" id="inputD" step="any" placeholder="距离">
+        <label>F</label>
+        <input type="number" id="inputF" step="any" placeholder="方向(密位)">
+        <label>E</label>
+        <input type="number" id="inputE" step="any" placeholder="高度角" value="0">
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-info" onclick="calcGResult()" style="font-size:11px;width:50%;min-width:120px;">📐 计算坐标</button>
+      </div>
+      <div id="gCalcResult" style="display:none;margin-top:6px;padding:6px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:12px;color:#166534;"></div>
+    </div>
+
+    <!-- 公共标签和时间戳 -->
+    <div class="form-row">
+      <label>时间</label>
+      <input type="datetime-local" id="inputTime" step="1">
+    </div>
+    <div class="form-row">
+      <label>标签</label>
+      <div id="tagCheckboxes" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"><span style="color:var(--text-muted);font-size:11px;">暂无标签</span></div>
+    </div>
+    <div class="form-row">
+      <label>新标签</label>
+      <input type="text" id="newTag" placeholder="新标签在此输入，多个标签使用逗号隔开" onkeydown="if(event.key==='Enter')addNewTag()">
+    </div>
+    <div class="btn-row" id="importBtnRow" style="display:none;">
+      <button class="btn btn-success btn-full" id="btnImportFile" onclick="importFromFile()" style="font-size:11px;padding:5px 8px;">📥 从文件导入</button>
+      <button class="btn btn-success btn-full" id="btnImportText" onclick="importFromText()" style="display:none;font-size:11px;padding:5px 8px;">📥 从文本导入</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-full" id="btnAddCoord" onclick="addCoordinate()">➕ 添加坐标</button>
+      <button class="btn btn-primary btn-full" id="btnAddP" style="display:none;" onclick="addCoordinateP()">➕ 添加坐标</button>
+      <button class="btn btn-primary btn-full" id="btnAddG" style="display:none;" onclick="addCoordinateG()">➕ 添加坐标</button>
+    </div>
+  </div>
+
+  <!-- 坐标列表 -->
+  <div class="panel">
+    <h3><span class="h3-left">📋 坐标列表</span><button class="help-btn" onclick="showHelp('coord-list')" title="查看帮助">?</button></h3>
+    <div class="table-wrap" id="coordListWrap"><div class="empty-hint">暂无坐标数据</div></div>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="clearAllCoordinates()">🗑 清空</button>
+      <button class="btn btn-warning" onclick="loadSampleData()">📦 示例</button>
+      <button class="btn btn-info" onclick="exportSelected()" style="font-size:11px;padding:5px 6px;">📤 导出选中</button>
+      <button class="btn btn-info" onclick="exportCoordinates()" style="font-size:11px;padding:5px 6px;">📤 导出全部</button>
+    </div>
+  </div>
+
+  <!-- 标签筛选 -->
+  <div class="panel">
+    <h3><span class="h3-left">🏷 标签筛选与分类</span><button class="help-btn" onclick="showHelp('tag-filter')" title="查看帮助">?</button></h3>
+    <div id="tagFilterList"><div class="empty-hint">暂无标签，添加坐标时自动创建</div></div>
+    <div class="btn-row">
+      <button class="btn btn-success" onclick="calcAverage()">📊 计算平均位置</button>
+      <button class="btn btn-info" onclick="toggleDrawCoord()">🎯 显示/隐藏坐标</button>
+    </div>
+    <div id="avgResults"></div>
+  </div>
+
+  <!-- 区域绘制 -->
+  <div class="panel">
+    <h3><span class="h3-left">🔲 绘制区域</span><button class="help-btn" onclick="showHelp('draw-area')" title="查看帮助">?</button></h3>
+    <div class="form-row">
+      <label>中心X</label>
+      <input type="number" id="areaCX" step="any" placeholder="中心点X">
+    </div>
+    <div class="form-row">
+      <label>中心Y</label>
+      <input type="number" id="areaCY" step="any" placeholder="中心点Y">
+    </div>
+    <div class="form-row">
+      <label>形状</label>
+      <select id="areaShape" onchange="onShapeChange()">
+        <option value="rectangle">矩形</option>
+        <option value="ellipse">椭圆形</option>
+      </select>
+    </div>
+    <div class="form-row-2col" id="rectInputs" style="display: none;">
+      <div class="form-row" style="grid-template-columns: 45px 1fr;">
+        <label>正面</label>
+        <input type="number" id="rectFront" step="any" placeholder="正面宽">
+      </div>
+      <div class="form-row" style="grid-template-columns: 45px 1fr;">
+        <label>纵深</label>
+        <input type="number" id="rectDepth" step="any" placeholder="纵深长">
+      </div>
+    </div>
+    <div class="form-row-2col" id="ellipseInputs" style="display: grid;">
+      <div class="form-row" style="grid-template-columns: 45px 1fr;">
+        <label>正面</label>
+        <input type="number" id="ellipseFront" step="any" placeholder="长轴">
+      </div>
+      <div class="form-row" style="grid-template-columns: 45px 1fr;">
+        <label>纵深</label>
+        <input type="number" id="ellipseDepth" step="any" placeholder="短轴">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>角度(密位)</label>
+      <input type="number" id="areaMil" step="any" placeholder="0-6000密位">
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:-2px;margin-bottom:8px;padding-left:78px;">
+      密位 = 顺时针角度 / 360° × 6000；正面⊥角度，纵深∥角度
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-warning" onclick="drawArea()">✏ 绘制区域</button>
+      <button class="btn btn-danger" onclick="clearAreas()">🧹 清除区域</button>
+      <button class="btn btn-info" id="toggleAreasBtn" onclick="toggleAreas()">👁 隐藏图形</button>
+    </div>
+    <div id="areaList" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- 点在图形内判断 -->
+  <div class="panel">
+    <h3><span class="h3-left">📐 点位判断</span><button class="help-btn" onclick="showHelp('point-judge')" title="查看帮助">?</button></h3>
+    <div class="form-row">
+      <label>选择点</label>
+      <select id="judgePointId" onchange="runJudge()"><option value="">无坐标点</option></select>
+    </div>
+    <div class="form-row">
+      <label>选择图形</label>
+      <select id="judgeAreaId" onchange="runJudge()"><option value="">无图形</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="runJudge()">🔍 判断是否在图形内</button>
+    </div>
+    <div id="judgeResult" style="margin-top:8px;"><div class="empty-hint">请选择点和图形</div></div>
+  </div>
+
+</div>
+
+<!-- ================= 右侧画布区 ================= -->
+<div class="canvas-wrap">
+
+  <!-- 工具栏 -->
+  <div class="canvas-toolbar">
+    <button class="btn-icon btn-icon-labeled" onclick="zoomIn()" title="放大">🔍+</button>
+    <button class="btn-icon btn-icon-labeled" onclick="zoomOut()" title="缩小">🔍-</button>
+    <button class="btn-icon btn-icon-labeled btn-icon-primary" onclick="resetView()" title="重置">⟲重置</button>
+    <div class="tool-group">
+      <label>缩放</label>
+      <input type="number" id="zoomLevel" value="100" min="10" max="1000" onchange="setZoom(this.value)">
+      <span style="font-size:11px;color:var(--text-muted);">%</span>
+    </div>
+    <div class="tool-group">
+      <label>网格</label>
+      <input type="checkbox" id="showGrid" checked="" onchange="renderAll()">
+    </div>
+    <button class="btn-icon btn-icon-primary" onclick="saveImage()" title="保存图片">💾</button>
+  </div>
+
+  <!-- 图例 -->
+  <div class="canvas-legend" id="legendBar"></div>
+
+  <!-- Canvas -->
+  <div class="canvas-container" id="canvasContainer">
+    <canvas id="mainCanvas"></canvas>
+  </div>
+
+  <!-- 状态栏 -->
+  <div class="status-bar">
+    <span id="statusLeft">坐标 0/0 个 | 区域 1 个 | 平均 0 组</span>
+    <span id="statusRight">缩放: 79% | 鼠标: (X=359.97, Y=3333.85)</span>
+  </div>
+
+</div>
+
+<script>
+// ================== 全局数据 ==================
+// 坐标数据结构：{ id, x, y, h, tags: ['标签1','标签2'] }
+let coordinates = [];
+let tags = new Map();        // tag -> color
+let activeTags = new Set();  // 筛选激活的标签
+let averages = new Map();    // tag -> {x,y,h,count}
+let showCoordOnMap = true;
+let showAreas = true;        // 图形显示/隐藏开关
+let areas = [];              // [{id, cx, cy, shape, front, depth, mil}]
+let selectedCoordIds = new Set(); // 支持多选
+let coordIdCounter = 0;
+let areaIdCounter = 0;
+
+const colorPool = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#10b981',
+  '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
+];
+let colorIdx = 0;
+
+// ================== 视图/画布状态 ==================
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvasContainer');
+let view = { scale: 1.0, offsetX: 0, offsetY: 0 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0, vx: 0, vy: 0 };
+let dragMoved = false;
+
+// ================== 工具函数 ==================
+function showToast(msg, type = '') {
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+function getTagColor(tag) {
+  if (!tag) return '#64748b';
+  if (!tags.has(tag)) {
+    tags.set(tag, colorPool[colorIdx % colorPool.length]);
+    colorIdx++;
+  }
+  return tags.get(tag);
+}
+// 坐标的主色：取第一个标签颜色
+function getCoordColor(c) {
+  if (!c.tags || !c.tags.length) return '#64748b';
+  return getTagColor(c.tags[0]);
+}
+// 解析标签输入（支持中英文逗号分隔，去重）
+function parseTags(input) {
+  const arr = input.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  return [...new Set(arr)];
+}
+function milToRad(mil) {
+  return (mil / 6000) * Math.PI * 2;
+}
+function formatNum(n) {
+  if (n === null || n === undefined || isNaN(n)) return '-';
+  return Number.isInteger(n) ? n : n.toFixed(2);
+}
+// 坐标是否在当前筛选标签内
+function coordVisible(c) {
+  if (!c.visible) return false;
+  if (!activeTags.size) return true;
+  return c.tags.some(t => activeTags.has(t));
+}
+
+// ================== 1. 坐标管理 ==================
+function addCoordinate() {
+  const x = parseFloat(document.getElementById('inputX').value);
+  const y = parseFloat(document.getElementById('inputY').value);
+  const hStr = document.getElementById('inputH').value;
+  const h = hStr === '' ? null : parseFloat(hStr);
+  // 多标签：合并复选框选择 + 文本输入（逗号分隔）
+  let tagList = parseTags(document.getElementById('newTag').value);
+  // 从复选框获取选中的标签
+  const cbTags = document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked');
+  cbTags.forEach(cb => { if (!tagList.includes(cb.value)) tagList.push(cb.value); });
+  if (!tagList.length) tagList = ['未分类'];
+
+  if (isNaN(x) || isNaN(y)) { showToast('请输入有效的X和Y坐标', 'error'); return; }
+  if (hStr !== '' && isNaN(h)) { showToast('H高度格式错误', 'error'); return; }
+
+  // 时间戳：从输入框获取，默认当前时间
+  const timeInput = document.getElementById('inputTime').value;
+  const timestamp = timeInput || formatTimestamp(new Date());
+
+  const id = ++coordIdCounter;
+  coordinates.push({ id, x, y, h, tags: tagList, visible: true, timestamp });
+
+  tagList.forEach(t => { if (!tags.has(t)) getTagColor(t); activeTags.add(t); });
+
+  document.getElementById('inputX').value = '';
+  document.getElementById('inputY').value = '';
+  document.getElementById('inputH').value = '';
+  document.getElementById('newTag').value = '';
+  document.getElementById('inputTime').value = formatDatetimeLocal(new Date());
+  // 清空复选框选中
+  document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked').forEach(cb => cb.checked = false);
+  document.getElementById('inputX').focus();
+
+  refreshAll();
+  showToast(`已添加坐标 (${x}, ${y}) [${tagList.join('/')}]`);
+}
+
+// ================== 录入模式切换 ==================
+function switchInputMode(mode) {
+  document.getElementById('inputPanelCoord').style.display = (mode === 'coord') ? '' : 'none';
+  document.getElementById('inputPanelFile').style.display = (mode === 'file') ? '' : 'none';
+  document.getElementById('inputPanelText').style.display = (mode === 'text') ? '' : 'none';
+  document.getElementById('inputPanelP').style.display = (mode === 'p') ? '' : 'none';
+  document.getElementById('inputPanelG').style.display = (mode === 'g') ? '' : 'none';
+  // 按钮高亮
+  ['tabCoord','tabFile','tabText','tabP','tabG'].forEach(id => {
+    document.getElementById(id).classList.remove('btn-primary');
+  });
+  const tabMap = { coord:'tabCoord', file:'tabFile', text:'tabText', p:'tabP', g:'tabG' };
+  document.getElementById(tabMap[mode]).classList.add('btn-primary');
+  // 切换添加按钮
+  document.getElementById('btnAddCoord').style.display = (mode === 'coord') ? '' : 'none';
+  document.getElementById('btnAddP').style.display = (mode === 'p') ? '' : 'none';
+  document.getElementById('btnAddG').style.display = (mode === 'g') ? '' : 'none';
+  // 切换导入按钮
+  const importRow = document.getElementById('importBtnRow');
+  if (mode === 'file') {
+    importRow.style.display = '';
+    document.getElementById('btnImportFile').style.display = '';
+    document.getElementById('btnImportText').style.display = 'none';
+  } else if (mode === 'text') {
+    importRow.style.display = '';
+    document.getElementById('btnImportFile').style.display = 'none';
+    document.getElementById('btnImportText').style.display = '';
+  } else {
+    importRow.style.display = 'none';
+  }
+}
+
+// ================== 导出功能 ==================
+function exportCoordinates(list) {
+  const data = list || coordinates;
+  if (!data.length) { showToast('没有坐标数据可导出', 'error'); return; }
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+  const isAll = data.length === coordinates.length;
+  const defaultName = `${dateStr}_坐标${data.length}个${isAll ? '' : '(选中)'}.txt`;
+
+  let text = '';
+  text += '# =========================================\n';
+  text += '# 坐标数据导出文件\n';
+  text += `# 导出时间: ${formatTimestamp(now)}\n`;
+  text += `# 坐标数量: ${data.length}\n`;
+  text += '# 格式: 编号 | X | Y | H | 标签 | 时间戳 | 屏蔽\n';
+  text += '# =========================================\n\n';
+
+  data.forEach(c => {
+    const h = (c.h !== null && c.h !== undefined) ? c.h : '';
+    const tagStr = (c.tags || []).join(',');
+    const ts = c.timestamp || '';
+    const blocked = c.visible === false ? '1' : '0';
+    text += `${c.id}\t${c.x}\t${c.y}\t${h}\t${tagStr}\t${ts}\t${blocked}\n`;
+  });
+
+  text += '\n# =========================================\n';
+  text += '# 文件结束\n';
+  text += '# =========================================\n';
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = defaultName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`已导出 ${data.length} 个坐标到TXT文件`, 'success');
+}
+
+function exportSelected() {
+  if (!selectedCoordIds.size) { showToast('请先在列表中单击选中坐标（支持多选）', 'error'); return; }
+  const selected = coordinates.filter(x => selectedCoordIds.has(x.id));
+  if (!selected.length) { showToast('选中的坐标不存在', 'error'); return; }
+  exportCoordinates(selected);
+}
+
+// ================== 导入功能（解析文本） ==================
+function parseImportText(text, overrideTs, overrideTagList) {
+  const lines = text.split('\n');
+  let importedCount = 0;
+  let duplicateCount = 0;
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith('#') || line.startsWith('---')) continue;
+
+    const parts = line.split('\t');
+    if (parts.length < 5) continue;
+
+    const x = parseFloat(parts[1]);
+    const y = parseFloat(parts[2]);
+    if (isNaN(x) || isNaN(y)) continue;
+
+    const hStr = (parts[3] || '').trim();
+    const h = hStr === '' ? null : parseFloat(hStr);
+
+    let tagList;
+    if (overrideTagList && overrideTagList.length) {
+      tagList = overrideTagList.slice();
+    } else {
+      const tagStr = (parts[4] || '').trim();
+      tagList = (tagStr && tagStr !== '0') ? tagStr.split(/[,，]/).map(t => t.trim()).filter(Boolean) : ['未分类'];
+    }
+
+    let ts;
+    if (overrideTs) {
+      ts = overrideTs;
+    } else {
+      const tsRaw = (parts[5] || '').trim();
+      ts = (tsRaw && tsRaw !== '0') ? tsRaw : formatTimestamp(new Date());
+    }
+
+    const blockRaw = (parts[6] || '').trim();
+    const blocked = (blockRaw && blockRaw !== '0') ? blockRaw === '1' : false;
+
+    // 重复判定：坐标(x,y)、标签、时间戳全部相同才视为重复
+    const isDup = coordinates.some(c =>
+      c.x === x && c.y === y &&
+      JSON.stringify((c.tags || []).slice().sort()) === JSON.stringify(tagList.slice().sort()) &&
+      (c.timestamp || '') === ts
+    );
+
+    if (isDup) { duplicateCount++; continue; }
+
+    const id = ++coordIdCounter;
+    coordinates.push({ id, x, y, h, tags: tagList, visible: !blocked, timestamp: ts });
+    tagList.forEach(t => { if (!tags.has(t)) getTagColor(t); activeTags.add(t); });
+    importedCount++;
+  }
+
+  if (importedCount > 0) {
+    refreshAll();
+  }
+  return { importedCount, duplicateCount };
+}
+
+// 从公共输入区读取覆盖用的时间戳和标签
+function readImportOverrides() {
+  // 时间：如果用户手动修改过 inputTime（非当前自动时间）则覆盖
+  const timeEl = document.getElementById('inputTime');
+  let overrideTs = null;
+  if (timeEl && document.activeElement === timeEl) {
+    overrideTs = timeEl.value ? formatTimestamp(new Date(timeEl.value)) : null;
+  } else if (timeEl && timeEl.value) {
+    const nowStr = formatDatetimeLocal(new Date());
+    if (timeEl.value !== nowStr) {
+      overrideTs = formatTimestamp(new Date(timeEl.value));
+    }
+  }
+
+  // 标签：用户勾选了复选框 / 输入了新标签则覆盖
+  let overrideTagList = [];
+  const cbTags = document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked');
+  cbTags.forEach(cb => { if (!overrideTagList.includes(cb.value)) overrideTagList.push(cb.value); });
+  const newTagInput = document.getElementById('newTag');
+  if (newTagInput && newTagInput.value.trim()) {
+    parseTags(newTagInput.value).forEach(t => { if (!overrideTagList.includes(t)) overrideTagList.push(t); });
+  }
+
+  return { overrideTs, overrideTagList };
+}
+
+// 统一的导入结果提示
+function showImportResult({ importedCount, duplicateCount }, clearFn) {
+  if (importedCount > 0 || duplicateCount > 0) {
+    const parts = [];
+    if (importedCount) parts.push(`新增 ${importedCount} 个`);
+    if (duplicateCount) parts.push(`跳过重复 ${duplicateCount} 个`);
+    showToast(`导入成功：${parts.join('，')}`, 'success');
+    if (clearFn) clearFn();
+  } else {
+    showToast('未找到有效坐标数据', 'error');
+  }
+}
+
+function importFromFile() {
+  const fileInput = document.getElementById('importFile');
+  if (!fileInput.files || !fileInput.files[0]) {
+    showToast('请先选择文件', 'error');
+    return;
+  }
+  const { overrideTs, overrideTagList } = readImportOverrides();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const result = parseImportText(text, overrideTs, overrideTagList);
+    showImportResult(result, () => { fileInput.value = ''; });
+  };
+  reader.onerror = () => showToast('读取文件失败', 'error');
+  reader.readAsText(fileInput.files[0], 'utf-8');
+}
+
+function importFromText() {
+  const text = document.getElementById('importTextArea').value;
+  if (!text.trim()) { showToast('请粘贴坐标文本', 'error'); return; }
+  const { overrideTs, overrideTagList } = readImportOverrides();
+  const result = parseImportText(text, overrideTs, overrideTagList);
+  showImportResult(result, () => { document.getElementById('importTextArea').value = ''; });
+}
+
+// ================== 单偏坐标输入 ==================
+// 共用计算：返回 { x, y, h, Amil, Agz_mil, Dgm, Dgz } 或 null（输入无效）
+function calcPCommon() {
+  const Gx = parseFloat(document.getElementById('inputPGx').value);
+  const Gy = parseFloat(document.getElementById('inputPGy').value);
+  const GhStr = document.getElementById('inputPGh').value;
+  const Gh = GhStr === '' ? 0 : parseFloat(GhStr);
+  const Mx = parseFloat(document.getElementById('inputPMx').value);
+  const My = parseFloat(document.getElementById('inputPMy').value);
+  const MhStr = document.getElementById('inputPMh').value;
+  const Mh = MhStr === '' ? 0 : parseFloat(MhStr);
+  const dDStr = document.getElementById('inputPdD').value;
+  const dD = dDStr === '' ? 0 : parseFloat(dDStr);
+  const dFStr = document.getElementById('inputPdF').value;
+  const dF = dFStr === '' ? 0 : parseFloat(dFStr);
+  const dEStr = document.getElementById('inputPdE').value;
+  const dE = dEStr === '' ? 0 : parseFloat(dEStr);
+
+  if (isNaN(Gx) || isNaN(Gy) || isNaN(Mx) || isNaN(My)) {
+    return null;
+  }
+
+  // 1. G→M 坐标方位角 A（X 轴增大方向为 0，单位密位）
+  //    使用 atan2(dy, dx)，+x 方向（正上方）为 0
+  const Arad = Math.atan2(My - Gy, Mx - Gx);
+  const Amil = Arad * 3000 / Math.PI;  // 弧度 → 密位（6000 密位 = 2π）
+
+  // 2. G→目标 坐标方位角 Agz = A + △F
+  const Agz_mil = Amil + dF;
+  const Agz_rad = (Agz_mil / 6000) * Math.PI * 2;
+
+  // 3. G→M 距离 Dgm，G→目标 距离 Dgz = Dgm + △D
+  const Dgm = Math.sqrt((Mx - Gx) ** 2 + (My - Gy) ** 2);
+  const Dgz = Dgm + dD;
+
+  // 4. 目标坐标：从 G 点沿 Agz 方向移动 Dgz
+  const x = Gx + Dgz * Math.cos(Agz_rad);
+  const y = Gy + Dgz * Math.sin(Agz_rad);
+
+  // 5. 目标高程 ≈ Mh + △E * Dgm
+  const h = Mh + dE * Dgm;
+
+  return { x, y, h, Amil, Agz_mil, Dgm, Dgz };
+}
+
+function calcPResult() {
+  const r = calcPCommon();
+  const el = document.getElementById('pCalcResult');
+  if (!r) {
+    showToast('请输入有效的 G 点和 M 点坐标', 'error');
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  el.innerHTML = `计算结果：<br>` +
+    `G→M 方位角 A = ${r.Amil.toFixed(1)} 密位，距离 Dgm = ${r.Dgm.toFixed(2)}<br>` +
+    `G→目标 方位角 Agz = ${r.Agz_mil.toFixed(1)} 密位，距离 Dgz = ${r.Dgz.toFixed(2)}<br>` +
+    `<strong>目标 X = ${r.x.toFixed(2)}，Y = ${r.y.toFixed(2)}，H = ${r.h.toFixed(2)}</strong>`;
+}
+
+function addCoordinateP() {
+  const r = calcPCommon();
+  if (!r) {
+    showToast('请输入有效的 G 点和 M 点坐标', 'error');
+    return;
+  }
+
+  // 获取标签
+  let tagList = parseTags(document.getElementById('newTag').value);
+  const cbTags = document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked');
+  cbTags.forEach(cb => { if (!tagList.includes(cb.value)) tagList.push(cb.value); });
+  if (!tagList.length) tagList = ['未分类'];
+
+  // 时间戳
+  const timeInput = document.getElementById('inputTime').value;
+  const timestamp = timeInput || formatTimestamp(new Date());
+
+  const id = ++coordIdCounter;
+  coordinates.push({
+    id,
+    x: Math.round(r.x * 100) / 100,
+    y: Math.round(r.y * 100) / 100,
+    h: Math.round(r.h * 100) / 100,
+    tags: tagList, visible: true, timestamp
+  });
+  tagList.forEach(t => { if (!tags.has(t)) getTagColor(t); activeTags.add(t); });
+
+  // 保留 G、M 点坐标记忆；只清空偏差量并重置为 0
+  ['inputPdD','inputPdF','inputPdE'].forEach(id => {
+    document.getElementById(id).value = '0';
+  });
+  document.getElementById('newTag').value = '';
+  document.getElementById('inputTime').value = formatDatetimeLocal(new Date());
+  document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked').forEach(cb => cb.checked = false);
+  document.getElementById('pCalcResult').style.display = 'none';
+
+  refreshAll();
+  showToast(`已添加坐标 (${r.x.toFixed(2)}, ${r.y.toFixed(2)}, h=${r.h.toFixed(2)}) [${tagList.join('/')}]`);
+}
+
+// ================== 单G坐标输入 ==================
+function calcGResult() {
+  const Gx = parseFloat(document.getElementById('inputGx').value);
+  const Gy = parseFloat(document.getElementById('inputGy').value);
+  const GhStr = document.getElementById('inputGh').value;
+  const Gh = GhStr === '' ? 0 : parseFloat(GhStr);
+  const J = parseFloat(document.getElementById('inputJ').value);
+  const D = parseFloat(document.getElementById('inputD').value);
+  const F = parseFloat(document.getElementById('inputF').value);
+  const EStr = document.getElementById('inputE').value;
+  const E = EStr === '' ? 0 : parseFloat(EStr);
+
+  if (isNaN(Gx) || isNaN(Gy) || isNaN(J) || isNaN(D) || isNaN(F)) {
+    showToast('请输入有效的G坐标、基准J、距离D和方向分划F', 'error');
+    document.getElementById('gCalcResult').style.display = 'none';
+    return;
+  }
+
+  // 计算方位角 A = J + 3000 - F（密位）
+  const Amil = J + 3000 - F;
+  // 将密位转为弧度
+  const Arad = (Amil / 6000) * Math.PI * 2;
+
+  // 从G点坐标方位角A方向移动距离D得到目标坐标
+  const x = Gx + D * Math.cos(Arad);
+  const y = Gy + D * Math.sin(Arad);
+  // 高度 h = Gh + E * D / 1000 * 0.95
+  const h = Gh + E * D / 1000 * 0.95;
+
+  const el = document.getElementById('gCalcResult');
+  el.style.display = '';
+  el.innerHTML = `计算结果：<br>X = ${x.toFixed(2)}，Y = ${y.toFixed(2)}，H = ${h.toFixed(2)}<br>方位角 A = ${Amil} 密位（${(Arad * 180 / Math.PI).toFixed(1)}°）`;
+}
+
+function addCoordinateG() {
+  const Gx = parseFloat(document.getElementById('inputGx').value);
+  const Gy = parseFloat(document.getElementById('inputGy').value);
+  const GhStr = document.getElementById('inputGh').value;
+  const Gh = GhStr === '' ? 0 : parseFloat(GhStr);
+  const J = parseFloat(document.getElementById('inputJ').value);
+  const D = parseFloat(document.getElementById('inputD').value);
+  const F = parseFloat(document.getElementById('inputF').value);
+  const EStr = document.getElementById('inputE').value;
+  const E = EStr === '' ? 0 : parseFloat(EStr);
+
+  if (isNaN(Gx) || isNaN(Gy) || isNaN(J) || isNaN(D) || isNaN(F)) {
+    showToast('请输入有效的G坐标、基准J、距离D和方向分划F', 'error');
+    return;
+  }
+
+  // 计算方位角 A = J + 3000 - F（密位）
+  const Amil = J + 3000 - F;
+  const Arad = (Amil / 6000) * Math.PI * 2;
+
+  const x = Gx + D * Math.cos(Arad);
+  const y = Gy + D * Math.sin(Arad);
+  const h = Gh + E * D / 1000 * 0.95;
+
+  // 获取标签
+  let tagList = parseTags(document.getElementById('newTag').value);
+  const cbTags = document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked');
+  cbTags.forEach(cb => { if (!tagList.includes(cb.value)) tagList.push(cb.value); });
+  if (!tagList.length) tagList = ['未分类'];
+
+  // 时间戳
+  const timeInput = document.getElementById('inputTime').value;
+  const timestamp = timeInput || formatTimestamp(new Date());
+
+  const id = ++coordIdCounter;
+  coordinates.push({ id, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, h: Math.round(h * 100) / 100, tags: tagList, visible: true, timestamp });
+  tagList.forEach(t => { if (!tags.has(t)) getTagColor(t); activeTags.add(t); });
+
+  // 只清空D、F，保留Gx、Gy、Gh、J以便记忆；E 重置为默认值 0
+  ['inputD','inputF'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('inputE').value = '0';
+  document.getElementById('newTag').value = '';
+  document.getElementById('inputTime').value = formatDatetimeLocal(new Date());
+  document.querySelectorAll('#tagCheckboxes input[type=checkbox]:checked').forEach(cb => cb.checked = false);
+  document.getElementById('gCalcResult').style.display = 'none';
+
+  refreshAll();
+  showToast(`已添加坐标 (${x.toFixed(2)}, ${y.toFixed(2)}, h=${h.toFixed(2)}) [${tagList.join('/')}]`);
+}
+
+// 格式化时间戳为 YYYY-MM-DD HH:MM:SS
+function formatTimestamp(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// 格式化 datetime-local 输入值
+function formatDatetimeLocal(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// 统一刷新：标签→列表→筛选→图例→判定→画布
+function refreshAll(extra) {
+  if (!extra || extra.tag !== false) refreshTagSelect();
+  if (!extra || extra.list !== false) renderCoordList();
+  if (!extra || extra.filter !== false) renderTagFilters();
+  if (!extra || extra.legend !== false) renderLegend();
+  if (!extra || extra.judge !== false) refreshJudgeSelects();
+  if (!extra || extra.draw !== false) renderAll();
+}
+
+// 清理无用标签：从tags/activeTags/averages中移除不再被任何坐标使用的标签
+// 返回是否有标签被移除
+function cleanupUnusedTags() {
+  const used = new Set();
+  coordinates.forEach(c => c.tags.forEach(t => used.add(t)));
+  let removedAny = false;
+  [...tags.keys()].forEach(t => {
+    if (!used.has(t)) {
+      tags.delete(t);
+      activeTags.delete(t);
+      if (averages.has(t)) { averages.delete(t); removedAny = true; }
+    }
+  });
+  return removedAny;
+}
+
+// 添加新标签
+function addNewTag() {
+  const input = document.getElementById('newTag');
+  const val = input.value.trim();
+  if (!val) return;
+  const newTags = parseTags(val);
+  newTags.forEach(t => { if (!tags.has(t)) { getTagColor(t); activeTags.add(t); } });
+  input.value = '';
+  refreshAll({ list: false, judge: false, draw: false });
+  showToast(`已添加标签: ${newTags.join(', ')}`, 'info');
+}
+
+// 渲染标签复选框
+function refreshTagCheckboxes() {
+  const container = document.getElementById('tagCheckboxes');
+  if (!container) return;
+  if (!tags.size) { container.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">暂无标签</span>'; return; }
+  container.innerHTML = [...tags.keys()].sort().map(t => {
+    const color = getTagColor(t);
+    return `<label style="display:inline-flex;align-items:center;gap:2px;padding:3px 6px;border:1.5px solid ${color};border-radius:12px;font-size:11px;cursor:pointer;background:#fff;">
+      <input type="checkbox" value="${t}" style="width:12px;height:12px;accent-color:${color};">
+      <span style="color:${color};font-weight:600;">${t}</span>
+    </label>`;
+  }).join('');
+}
+
+// 编辑坐标标签（多标签，逗号分隔）
+function editCoordTags(id) {
+  const c = coordinates.find(x => x.id === id);
+  if (!c) return;
+  const cur = (c.tags || []).join(',');
+  const input = prompt(`修改坐标 #${c.id} 的标签（多个用逗号分隔）：`, cur);
+  if (input === null) return;
+  const newTags = parseTags(input);
+  if (!newTags.length) { showToast('标签不能为空', 'error'); return; }
+  c.tags = newTags;
+  newTags.forEach(t => { if (!tags.has(t)) getTagColor(t); activeTags.add(t); });
+  // 清理无用标签并同步平均值
+  const removedAny = cleanupUnusedTags();
+  refreshAll();
+  if (removedAny) renderAvgResults();
+  showToast(`已修改 #${c.id} 标签为 ${newTags.join('/')}`);
+}
+
+function deleteCoordinate(id) {
+  coordinates = coordinates.filter(c => c.id !== id);
+  if (selectedCoordIds.has(id)) selectedCoordIds.delete(id);
+  // 清理无用标签并同步平均值
+  const removedAny = cleanupUnusedTags();
+  refreshAll();
+  if (removedAny) renderAvgResults();
+  showToast('已删除坐标', 'info');
+}
+
+function toggleCoordVisible(id) {
+  const c = coordinates.find(x => x.id === id);
+  if (!c) return;
+  c.visible = c.visible === false ? true : false;
+  renderCoordList();
+  renderAll();
+}
+
+function clearAllCoordinates() {
+  if (!coordinates.length) return;
+  if (!confirm('确定清空所有坐标数据吗？')) return;
+  coordinates = [];
+  averages.clear();
+  selectedCoordIds.clear();
+  tags.clear();
+  activeTags.clear();
+  renderAvgResults();
+  refreshAll();
+  showToast('已清空所有坐标', 'info');
+}
+
+function selectCoord(id, row) {
+  // 多选：再次单击同一行则切换选中状态
+  if (selectedCoordIds.has(id)) {
+    selectedCoordIds.delete(id);
+    if (row) row.classList.remove('selected');
+  } else {
+    selectedCoordIds.add(id);
+    if (row) row.classList.add('selected');
+    // 同步行高亮（防止外部调用未传row）
+    document.querySelectorAll('#coordListWrap tr').forEach(r => {
+      if (r.classList.contains('selected') && !selectedCoordIds.has(parseInt(r.dataset.cid))) {
+        r.classList.remove('selected');
+      }
+    });
+  }
+  // 更新状态栏
+  if (selectedCoordIds.size === 0) {
+    document.getElementById('statusLeft').textContent = '就绪';
+  } else if (selectedCoordIds.size === 1) {
+    const c = coordinates.find(x => x.id === [...selectedCoordIds][0]);
+    if (c) {
+      const ts = c.timestamp ? ` | 时间=${c.timestamp}` : '';
+      document.getElementById('statusLeft').textContent =
+        `已选择 #${c.id}: X=${c.x}, Y=${c.y}, H=${c.h ?? '未设置'}, 标签=${(c.tags||[]).join('/')}${ts}`;
+      centerOnWorld(c.x, c.y);
+    }
+  } else {
+    document.getElementById('statusLeft').textContent = `已选择 ${selectedCoordIds.size} 个坐标`;
+  }
+  renderAll();
+}
+
+function loadSampleData() {
+  const tagNames = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const count = 8 + Math.floor(Math.random() * 5);
+  // 随机选择一个5位数的中心坐标（40000~42000），本组所有示例都围绕该中心 ±500 生成
+  const centerX = Math.round(40000 + Math.random() * 2000);
+  const centerY = Math.round(40000 + Math.random() * 2000);
+  // 保证同组所有示例至少有一个公共标签（从tagNames中随机选一个公共标签）
+  const commonTag = tagNames[Math.floor(Math.random() * tagNames.length)];
+  for (let i = 0; i < count; i++) {
+    // 在中心 ±500 范围内随机取值
+    const x = Math.round(centerX + (Math.random() * 1000 - 500));
+    const y = Math.round(centerY + (Math.random() * 1000 - 500));
+    const h = Math.random() < 0.7 ? Math.round(50 + Math.random() * 200) : null;
+    // 从6个标签中随机选择1-2个附加标签，再加上公共标签（至少保证1个公共标签）
+    const extraCount = Math.floor(Math.random() * 2); // 0或1个额外标签
+    const otherTags = tagNames.filter(t => t !== commonTag).sort(() => Math.random() - 0.5);
+    const coordTags = [commonTag, ...otherTags.slice(0, extraCount)];
+    const id = ++coordIdCounter;
+    coordinates.push({ id, x, y, h, tags: coordTags, visible: true, timestamp: formatTimestamp(new Date()) });
+    coordTags.forEach(t => { if (!tags.has(t)) { getTagColor(t); activeTags.add(t); } });
+  }
+  refreshAll();
+  showToast(`加载了 ${count} 个示例坐标（中心 ${centerX}, ${centerY}，公共标签：${commonTag}）`, 'info');
+}
+
+// ================== 2. 列表/标签渲染 ==================
+function refreshTagSelect() {
+  refreshTagCheckboxes();
+}
+
+function renderCoordList() {
+  const wrap = document.getElementById('coordListWrap');
+  if (!coordinates.length) {
+    wrap.innerHTML = '<div class="empty-hint">暂无坐标数据</div>';
+    return;
+  }
+  const rows = coordinates.map(c => {
+    const blocked = c.visible === false;
+    const tagPass = !activeTags.size || c.tags.some(t => activeTags.has(t));
+    const isShown = !blocked && tagPass;
+    const swIcon = blocked ? '◌' : '◉';
+    const swColor = blocked ? 'var(--text-muted)' : 'var(--success)';
+    const opacity = isShown ? '' : 'opacity:0.5;';
+    const ts = c.timestamp ? `<div style="font-size:10px;color:var(--text-muted);">${c.timestamp}</div>` : '';
+    return `
+    <tr onclick="selectCoord(${c.id}, this)" data-cid="${c.id}" class="${selectedCoordIds.has(c.id)?'selected':''}" style="${opacity}">
+      <td>${c.id}${ts}</td>
+      <td>${c.x}</td>
+      <td>${c.y}</td>
+      <td>${c.h ?? '-'}</td>
+      <td style="font-size:11px;">${(c.tags||[]).join(' / ')}</td>
+      <td>
+        <button class="del-btn" style="font-size:13px;color:${swColor};" onclick="event.stopPropagation();toggleCoordVisible(${c.id})" title="${blocked?'已屏蔽':'显示中'}">${swIcon}</button>
+        <button class="del-btn" style="font-size:13px;color:var(--info);" onclick="event.stopPropagation();editCoordTags(${c.id})" title="编辑标签">✎</button>
+        <button class="del-btn" onclick="event.stopPropagation();deleteCoordinate(${c.id})" title="删除">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="coord-table">
+    <thead><tr><th>#</th><th>X</th><th>Y</th><th>H</th><th>标签</th><th>显示/编辑</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function renderTagFilters() {
+  const wrap = document.getElementById('tagFilterList');
+  if (!tags.size) {
+    wrap.innerHTML = '<div class="empty-hint">暂无标签，添加坐标时自动创建</div>';
+    return;
+  }
+  const html = [...tags.keys()].map(t => `
+    <label class="tag-chip ${activeTags.has(t)?'active':''}" onclick="toggleTag('${t.replace(/'/g,"\\'")}')">
+      <input type="checkbox" ${activeTags.has(t)?'checked':''}>
+      <span class="tag-dot" style="background:${tags.get(t)}"></span>${t}
+      <span style="color:var(--text-muted);">(${coordinates.filter(c=>c.tags.includes(t) && c.visible).length})</span>
+    </label>
+  `).join('');
+  wrap.innerHTML = `<div class="tag-filter-list">${html}</div>`;
+}
+
+function toggleTag(t) {
+  if (activeTags.has(t)) {
+    activeTags.delete(t);
+  } else {
+    activeTags.add(t);
+    // 选中标签时，自动解锁包含该标签的所有坐标
+    coordinates.forEach(c => {
+      if (c.tags && c.tags.includes(t) && c.visible === false) {
+        c.visible = true;
+      }
+    });
+  }
+  refreshAll({ tag: false, judge: false });
+}
+
+// ================== 3. 平均值计算 ==================
+function calcAverage() {
+  averages.clear();
+  const tagList = activeTags.size ? [...activeTags] : [...tags.keys()];
+  if (!tagList.length) { showToast('没有可计算的坐标', 'error'); return; }
+
+  tagList.forEach(t => {
+    const totalCount = coordinates.filter(c => c.tags.includes(t)).length;
+    const list = coordinates.filter(c => c.tags.includes(t) && c.visible);
+    if (!list.length) return;
+    const sumX = list.reduce((s, c) => s + c.x, 0);
+    const sumY = list.reduce((s, c) => s + c.y, 0);
+    const hList = list.filter(c => c.h !== null && c.h !== undefined);
+    const sumH = hList.reduce((s, c) => s + c.h, 0);
+    averages.set(t, {
+      count: list.length,
+      totalCount,
+      x: sumX / list.length,
+      y: sumY / list.length,
+      h: hList.length ? sumH / hList.length : null,
+      visible: true
+    });
+  });
+  renderAvgResults();
+  renderAll();
+  showToast(`已计算 ${averages.size} 个标签的平均值`, 'success');
+}
+
+function renderAvgResults() {
+  const wrap = document.getElementById('avgResults');
+  if (!averages.size) { wrap.innerHTML = ''; return; }
+  const html = [...averages.entries()].map(([t, a]) => {
+    const hidden = a.visible === false;
+    const countText = `${a.totalCount}个点中的${a.count}个`;
+    return `
+    <div class="avg-result" style="${hidden ? 'opacity:0.5;' : ''}">
+      <div class="tag-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <span style="display:flex;align-items:center;gap:4px;">
+          <span class="tag-dot" style="background:${getTagColor(t)}"></span>${t}
+          <span style="color:var(--text-muted);font-weight:400;font-size:12px;">(${countText})</span>
+        </span>
+        <button class="del-btn" style="font-size:13px;color:${hidden?'var(--text-muted)':'var(--success)'};margin:0;display:inline-flex;align-items:center;gap:2px;" onclick="toggleAvgVisible('${t.replace(/'/g,"\\'")}')" title="${hidden?'显示':'隐藏'}">${hidden?'◌ 显示':'◉ 隐藏'}</button>
+      </div>
+      <div class="stat-row">
+        <span>X̅<strong>${formatNum(a.x)}</strong></span>
+        <span>Ȳ<strong>${formatNum(a.y)}</strong></span>
+        <span>H̅<strong>${formatNum(a.h)}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = html;
+}
+
+// 单个平均点显示/隐藏切换
+function toggleAvgVisible(tag) {
+  const a = averages.get(tag);
+  if (!a) return;
+  a.visible = !a.visible;
+  renderAvgResults();
+  renderAll();
+}
+
+function toggleDrawCoord() {
+  showCoordOnMap = !showCoordOnMap;
+  renderAll();
+  showToast(showCoordOnMap ? '显示坐标点' : '隐藏坐标点', 'info');
+}
+
+// ================== 4. 区域绘制 ==================
+function onShapeChange() {
+  const shape = document.getElementById('areaShape').value;
+  document.getElementById('rectInputs').style.display = shape === 'rectangle' ? 'grid' : 'none';
+  document.getElementById('ellipseInputs').style.display = shape === 'ellipse' ? 'grid' : 'none';
+}
+
+// 统一刷新区域相关视图：列表 + 图例 + 判定下拉 + 画布
+function refreshAreaViews() {
+  renderAreaList();
+  renderLegend();
+  refreshJudgeSelects();
+  renderAll();
+}
+
+function drawArea() {
+  const cx = parseFloat(document.getElementById('areaCX').value);
+  const cy = parseFloat(document.getElementById('areaCY').value);
+  const shape = document.getElementById('areaShape').value;
+  const mil = parseFloat(document.getElementById('areaMil').value);
+  let front, depth;
+
+  if (isNaN(cx) || isNaN(cy)) { showToast('请输入中心点X和Y', 'error'); return; }
+  if (isNaN(mil)) { showToast('请输入角度(密位)', 'error'); return; }
+
+  if (shape === 'rectangle') {
+    front = parseFloat(document.getElementById('rectFront').value);
+    depth = parseFloat(document.getElementById('rectDepth').value);
+  } else {
+    front = parseFloat(document.getElementById('ellipseFront').value);
+    depth = parseFloat(document.getElementById('ellipseDepth').value);
+  }
+  if (isNaN(front) || isNaN(depth) || front <= 0 || depth <= 0) {
+    showToast('请输入有效的正面和纵深 (>0)', 'error'); return;
+  }
+
+  const id = ++areaIdCounter;
+  areas.push({ id, cx, cy, shape, front, depth, mil, visible: true });
+  showAreas = true;
+  updateToggleAreasBtn();
+  refreshAreaViews();
+  showToast(`已绘制${shape === 'rectangle' ? '矩形' : '椭圆形'}区域`);
+}
+
+// 显示/隐藏所有图形（全局开关）
+function toggleAreas() {
+  showAreas = !showAreas;
+  updateToggleAreasBtn();
+  renderLegend();
+  renderAll();
+  showToast(showAreas ? '已显示图形' : '已隐藏图形', 'info');
+}
+function updateToggleAreasBtn() {
+  document.getElementById('toggleAreasBtn').textContent = showAreas ? '👁 隐藏图形' : '👁 显示图形';
+}
+
+// 单个图形显示/隐藏切换
+function toggleAreaVisible(id) {
+  const a = areas.find(x => x.id === id);
+  if (!a) return;
+  a.visible = !a.visible;
+  refreshAreaViews();
+}
+
+function deleteArea(id) {
+  areas = areas.filter(a => a.id !== id);
+  refreshAreaViews();
+}
+
+function clearAreas() {
+  areas = [];
+  refreshAreaViews();
+  showToast('已清除所有区域', 'info');
+}
+
+function renderAreaList() {
+  const wrap = document.getElementById('areaList');
+  if (!areas.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = areas.map((a, idx) => {
+    const hidden = a.visible === false;
+    const visIcon = hidden ? '◌' : '◉';
+    const visColor = hidden ? 'var(--text-muted)' : (a.shape === 'rectangle' ? 'var(--accent)' : '#8b5cf6');
+    const opacity = hidden ? 'opacity:0.5;' : '';
+    return `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#fff7ed;border-radius:6px;margin-top:5px;font-size:12px;border:1px solid var(--border);cursor:pointer;${opacity}" onclick="selectArea(${a.id})">
+      <span>
+        <span style="color:${a.shape==='rectangle'?'var(--accent)':'#8b5cf6'};font-weight:bold;">${a.shape==='rectangle'?'■ 矩形':'● 椭圆'}#${idx+1}</span>
+        (${a.cx},${a.cy}) ${a.front}×${a.depth} ${a.mil}密位
+      </span>
+      <span style="display:flex;gap:2px;" onclick="event.stopPropagation();">
+        <button class="del-btn" style="font-size:13px;color:${visColor};" onclick="toggleAreaVisible(${a.id})" title="${hidden?'显示':'隐藏'}">${visIcon}</button>
+        <button class="del-btn" onclick="deleteArea(${a.id})" title="删除">×</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+// ================== 点位判断 ==================
+// 判断点(px,py)相对区域a的位置
+// 返回: { status: 'inside' | 'outside' | 'edge', onEdge: bool }
+function pointInArea(px, py, a) {
+  const EPS = 1e-9;  // 浮点容差
+  const theta = milToRad(a.mil);
+  // 纵深方向单位向量（世界坐标）
+  const dX = Math.cos(theta), dY = Math.sin(theta);
+  // 正面方向单位向量（纵深逆时针90°）
+  const fX = -dY, fY = dX;
+  // 点相对中心的偏移
+  const dx = px - a.cx, dy = py - a.cy;
+  // 投影到局部坐标：localD 沿纵深，localF 沿正面
+  const localD = dx * dX + dy * dY;
+  const localF = dx * fX + dy * fY;
+
+  if (a.shape === 'rectangle') {
+    const halfD = a.depth / 2, halfF = a.front / 2;
+    const ad = Math.abs(localD), af = Math.abs(localF);
+    const insideD = ad <= halfD + EPS;
+    const insideF = af <= halfF + EPS;
+    const onEdgeD = Math.abs(ad - halfD) <= EPS;
+    const onEdgeF = Math.abs(af - halfF) <= EPS;
+    if (!insideD || !insideF) {
+      return { status: 'outside', onEdge: false };
+    }
+    return { status: 'inside', onEdge: onEdgeD || onEdgeF };
+  } else {
+    // 椭圆：(localF/(front/2))^2 + (localD/(depth/2))^2 <= 1
+    const rx = a.front / 2, ry = a.depth / 2;
+    if (rx <= 0 || ry <= 0) return { status: 'outside', onEdge: false };
+    const val = (localF / rx) ** 2 + (localD / ry) ** 2;
+    if (val > 1 + EPS) return { status: 'outside', onEdge: false };
+    const onEdge = Math.abs(val - 1) <= EPS;
+    return { status: 'inside', onEdge };
+  }
+}
+
+function refreshJudgeSelects() {
+  const ptSel = document.getElementById('judgePointId');
+  const arSel = document.getElementById('judgeAreaId');
+  const curPt = ptSel.value, curAr = arSel.value;
+  ptSel.innerHTML = coordinates.length
+    ? coordinates.map(c => `<option value="${c.id}">#${c.id} (${c.x},${c.y}) [${(c.tags||[]).join('/')}]</option>`).join('')
+    : '<option value="">无坐标点</option>';
+  arSel.innerHTML = areas.length
+    ? areas.map((a, i) => `<option value="${a.id}">${a.shape==='rectangle'?'矩形':'椭圆'}#${i+1} 中心(${a.cx},${a.cy})</option>`).join('')
+    : '<option value="">无图形</option>';
+  ptSel.value = curPt; arSel.value = curAr;
+}
+
+function runJudge() {
+  const wrap = document.getElementById('judgeResult');
+  const pid = parseInt(document.getElementById('judgePointId').value);
+  const aid = parseInt(document.getElementById('judgeAreaId').value);
+  if (!pid || !aid) { wrap.innerHTML = '<div class="empty-hint">请选择点和图形</div>'; return; }
+  const c = coordinates.find(x => x.id === pid);
+  const a = areas.find(x => x.id === aid);
+  if (!c || !a) { wrap.innerHTML = '<div class="empty-hint">数据不存在</div>'; return; }
+  const res = pointInArea(c.x, c.y, a);
+  const distD = Math.hypot(c.x - a.cx, c.y - a.cy);
+  let statusText, color, icon, bgColor;
+  if (res.onEdge) {
+    statusText = '点在图形边缘上';
+    color = 'var(--accent)';
+    icon = '🔶';
+    bgColor = '#fffbeb';
+  } else if (res.status === 'inside') {
+    statusText = '点在图形内';
+    color = 'var(--success)';
+    icon = '✅';
+    bgColor = '#f0fdf4';
+  } else {
+    statusText = '点在图形外';
+    color = 'var(--danger)';
+    icon = '❌';
+    bgColor = '#fef2f2';
+  }
+  wrap.innerHTML = `
+    <div style="padding:10px;border-radius:8px;background:${bgColor};border:1px solid ${color};font-size:12px;">
+      <div style="font-weight:700;color:${color};font-size:14px;margin-bottom:6px;">${icon} ${statusText}</div>
+      <div style="color:var(--text-muted);">
+        点 #${c.id} (X=${c.x}, Y=${c.y}, H=${c.h ?? '无'})
+      </div>
+      <div style="color:var(--text-muted);">
+        ${a.shape==='rectangle'?'矩形':'椭圆'} 中心(${a.cx},${a.cy}) ${a.front}×${a.depth} ${a.mil}密位
+      </div>
+      <div style="color:var(--text-muted);margin-top:4px;">
+        到中心距离: ${formatNum(distD)}
+      </div>
+    </div>`;
+  // 高亮选中点（在多选基础上聚焦判定点）
+  selectedCoordIds.add(c.id);
+  renderCoordList();
+  renderAll();
+}
+
+// ================== 5. Canvas渲染 ==================
+function worldToScreen(wx, wy) {
+  const cx = canvas._logicalW / 2 + view.offsetX;
+  const cy = canvas._logicalH / 2 + view.offsetY;
+  const sx = cx + wy * view.scale;
+  const sy = cy - wx * view.scale;
+  return { x: sx, y: sy };
+}
+function screenToWorld(sx, sy) {
+  const cx = canvas._logicalW / 2 + view.offsetX;
+  const cy = canvas._logicalH / 2 + view.offsetY;
+  const wy = (sx - cx) / view.scale;
+  const wx = (cy - sy) / view.scale;
+  return { x: wx, y: wy };
+}
+
+function resizeCanvas() {
+  const rect = container.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  canvas._logicalW = rect.width;
+  canvas._logicalH = rect.height;
+}
+
+function renderAll(forceGrid) {
+  resizeCanvas();
+  const W = canvas._logicalW, H = canvas._logicalH;
+
+  ctx.fillStyle = '#fffcf5';
+  ctx.fillRect(0, 0, W, H);
+
+  drawGrid(W, H, forceGrid);
+  drawAxes(W, H);
+  if (showAreas) drawAreas();
+  drawAverages();
+  if (showCoordOnMap) drawCoordinates();
+  drawSelected();
+  updateStatusRight();
+}
+
+// 网格更细密：目标间距从200降到90，让格子更小
+function computeNiceGrid(target) {
+  if (target <= 0) return 1;
+  const pow10 = Math.pow(10, Math.floor(Math.log10(target)));
+  const n = target / pow10;
+  let nice;
+  if (n < 2) nice = 1;
+  else if (n < 5) nice = 2;
+  else if (n < 10) nice = 5;
+  else nice = 10;
+  return nice * pow10;
+}
+
+function drawGrid(W, H, forceGrid) {
+  const showGrid = forceGrid || document.getElementById('showGrid').checked;
+  if (!showGrid) return;
+
+  // 主网格目标间距 ~110px，数值自适应跳过防重合
+  let gridWorld = computeNiceGrid(110 / view.scale);
+
+  const tl = screenToWorld(0, 0);
+  const br = screenToWorld(W, H);
+  const minX = Math.min(tl.x, br.x), maxX = Math.max(tl.x, br.x);
+  const minY = Math.min(tl.y, br.y), maxY = Math.max(tl.y, br.y);
+
+  // 限制网格不要过细：至少覆盖可见数据范围的1/20
+  const dataRange = Math.max(maxX - minX, maxY - minY, 100);
+  const minGrid = dataRange / 20;
+  if (gridWorld < minGrid) gridWorld = computeNiceGrid(minGrid);
+
+  const startX = Math.floor(minX / gridWorld) * gridWorld;
+  const endX = Math.ceil(maxX / gridWorld) * gridWorld;
+  const startY = Math.floor(minY / gridWorld) * gridWorld;
+  const endY = Math.ceil(maxY / gridWorld) * gridWorld;
+
+  // 次网格（细分5份，更密）
+  const subGrid = gridWorld / 5;
+  ctx.strokeStyle = '#fde9c8';
+  ctx.lineWidth = 0.3;
+  for (let x = startX; x <= endX; x += subGrid) {
+    const p1 = worldToScreen(x, minY);
+    const p2 = worldToScreen(x, maxY);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  }
+  for (let y = startY; y <= endY; y += subGrid) {
+    const p1 = worldToScreen(minX, y);
+    const p2 = worldToScreen(maxX, y);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  }
+
+  // 主网格线
+  ctx.strokeStyle = '#f3c98a';
+  ctx.lineWidth = 0.5;
+
+  for (let x = startX; x <= endX; x += gridWorld) {
+    const p1 = worldToScreen(x, minY - gridWorld);
+    const p2 = worldToScreen(x, maxY + gridWorld);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+  for (let y = startY; y <= endY; y += gridWorld) {
+    const p1 = worldToScreen(minX - gridWorld, y);
+    const p2 = worldToScreen(maxX + gridWorld, y);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+
+  // ===== 刻度数值：沿坐标轴均匀分布 =====
+  ctx.font = '9px "Segoe UI", monospace';
+
+  function drawLabel(text, x, y) {
+    ctx.fillStyle = '#7c2d12';
+    ctx.fillText(text, x, y);
+  }
+
+  const origin = worldToScreen(0, 0);
+  const axisX = origin.x; // 垂直轴屏幕x
+  const axisY = origin.y; // 水平轴屏幕y
+
+  // 刻度位置：轴可见→轴上；轴在屏外→最近边缘
+  const xTickY = Math.max(18, Math.min(H - 12, axisY));
+  const yTickX = Math.max(30, Math.min(W - 12, axisX));
+
+  // X轴刻度：world X映射到screen Y（垂直方向），刻度沿屏幕Y分布
+  {
+    const topLeft = screenToWorld(0, 0);
+    const bottomLeft = screenToWorld(0, H);
+    const visMinX = Math.min(topLeft.x, bottomLeft.x);
+    const visMaxX = Math.max(topLeft.x, bottomLeft.x);
+    const targetTicks = 8;
+    const rawStep = (visMaxX - visMinX) / targetTicks;
+    const step = computeNiceGrid(rawStep);
+    const startTick = Math.floor(visMinX / step) * step;
+    for (let x = startTick; x <= visMaxX; x += step) {
+      if (Math.abs(x) < 0.01) continue;
+      const p = worldToScreen(x, 0);
+      // X轴刻度沿垂直方向分布，检查screen Y是否在可见范围
+      if (p.y > 8 && p.y < H - 8) {
+        const label = formatGridLabel(x);
+        const tw = ctx.measureText(label).width;
+        ctx.strokeStyle = '#92400e';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(yTickX - 2.5, p.y); ctx.lineTo(yTickX + 2.5, p.y);
+        ctx.stroke();
+        drawLabel(label, yTickX - tw - 4, p.y + 3);
+      }
+    }
+  }
+  // Y轴刻度：world Y映射到screen X（水平方向），刻度沿屏幕X分布
+  {
+    const topLeft = screenToWorld(0, 0);
+    const topRight = screenToWorld(W, 0);
+    const visMinY = Math.min(topLeft.y, topRight.y);
+    const visMaxY = Math.max(topLeft.y, topRight.y);
+    const targetTicks = 8;
+    const rawStep = (visMaxY - visMinY) / targetTicks;
+    const step = computeNiceGrid(rawStep);
+    const startTick = Math.floor(visMinY / step) * step;
+    for (let y = startTick; y <= visMaxY; y += step) {
+      if (Math.abs(y) < 0.01) continue;
+      const p = worldToScreen(0, y);
+      // Y轴刻度沿水平方向分布，检查screen X是否在可见范围
+      if (p.x > 8 && p.x < W - 8) {
+        const label = formatGridLabel(y);
+        const tw = ctx.measureText(label).width;
+        ctx.strokeStyle = '#92400e';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(p.x, xTickY - 2.5); ctx.lineTo(p.x, xTickY + 2.5);
+        ctx.stroke();
+        drawLabel(label, p.x - tw / 2, xTickY + 12);
+      }
+    }
+  }
+  // 原点标记
+  drawLabel('0', yTickX - 9, xTickY + 12);
+}
+
+// 格式化网格标签：直接显示完整数字
+function formatGridLabel(v) {
+  if (Math.round(v) === v) return String(Math.round(v));
+  return v.toFixed(1);
+}
+
+function drawAxes(W, H) {
+  const o = worldToScreen(0, 0);
+  // 坐标轴在屏幕外时，延伸到屏幕边缘
+  const axisX = Math.max(0, Math.min(W, o.x));
+  const axisY = Math.max(0, Math.min(H, o.y));
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(axisX, 0);
+  ctx.lineTo(axisX, H);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, axisY);
+  ctx.lineTo(W, axisY);
+  ctx.stroke();
+
+  drawArrow(axisX, axisY, axisX, Math.max(10, axisY - view.scale * 1.2), '#dc2626');
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = '#dc2626';
+  ctx.fillText('X', axisX + 6, 14);
+  drawArrow(axisX, axisY, Math.min(W - 10, axisX + view.scale * 1.2), axisY, '#2563eb');
+  ctx.fillStyle = '#2563eb';
+  ctx.fillText('Y', W - 18, axisY - 6);
+}
+
+function drawArrow(x1, y1, x2, y2, color) {
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - 5 * Math.cos(ang - Math.PI / 6), y2 - 5 * Math.sin(ang - Math.PI / 6));
+  ctx.lineTo(x2 - 5 * Math.cos(ang + Math.PI / 6), y2 - 5 * Math.sin(ang + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCoordinates() {
+  coordinates.forEach(c => {
+    if (!coordVisible(c)) return;
+    const p = worldToScreen(c.x, c.y);
+    const color = getCoordColor(c);
+    const r = 3;
+    if (c.tags.length > 1) {
+      c.tags.forEach((t, i) => {
+        ctx.fillStyle = getTagColor(t);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, (i / c.tags.length) * Math.PI * 2, ((i + 1) / c.tags.length) * Math.PI * 2);
+        ctx.arc(p.x, p.y, 0, ((i + 1) / c.tags.length) * Math.PI * 2, (i / c.tags.length) * Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+    } else {
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (selectedCoordIds.has(c.id)) {
+      ctx.fillStyle = '#3d2817';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(`#${c.id}(${c.x},${c.y}${c.h!=null?','+c.h:''})`, p.x + 5, p.y - 4);
+    }
+  });
+}
+
+function drawAverages() {
+  averages.forEach((a, t) => {
+    if (a.visible === false) return;
+    if (activeTags.size && !activeTags.has(t)) return;
+    const p = worldToScreen(a.x, a.y);
+    const color = getTagColor(t);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    const r = 3;
+    ctx.beginPath();
+    ctx.moveTo(p.x - r, p.y); ctx.lineTo(p.x + r, p.y);
+    ctx.moveTo(p.x, p.y - r); ctx.lineTo(p.x, p.y + r);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.font = '9px sans-serif';
+    const avgLabel = a.totalCount != null ? `${a.count}/${a.totalCount}` : `${a.count}`;
+    ctx.fillText(`μ[${t}](${avgLabel}) (${formatNum(a.x)},${formatNum(a.y)})`, p.x + 6, p.y - 5);
+  });
+}
+
+function drawSelected() {
+  if (!selectedCoordIds.size) return;
+  // 为所有选中的坐标绘制高亮圈
+  selectedCoordIds.forEach(id => {
+    const c = coordinates.find(x => x.id === id);
+    if (!c) return;
+    const p = worldToScreen(c.x, c.y);
+    ctx.strokeStyle = '#eab308';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // 仅在单选时显示信息气泡（多选时避免重叠）
+  if (selectedCoordIds.size !== 1) return;
+  const c = coordinates.find(x => x.id === [...selectedCoordIds][0]);
+  if (!c) return;
+  const p = worldToScreen(c.x, c.y);
+
+  // 信息气泡：显示坐标、高度及时间
+  const lines = [
+    `#${c.id}`,
+    `X: ${c.x}`,
+    `Y: ${c.y}`,
+    `H: ${c.h ?? '未设置'}`,
+    `标签: ${(c.tags||[]).join(' / ')}`,
+    c.timestamp ? `时间: ${c.timestamp}` : ''
+  ].filter(Boolean);
+  ctx.font = 'bold 11px sans-serif';
+  const padX = 7, padY = 5, lineH = 15;
+  let maxW = 0;
+  lines.forEach(l => { const w = ctx.measureText(l).width; if (w > maxW) maxW = w; });
+  const boxW = maxW + padX * 2;
+  const boxH = lines.length * lineH + padY * 2;
+  // 气泡位置：点的右上方，若超出右边则放左边
+  let bx = p.x + 16;
+  let by = p.y - boxH - 8;
+  if (bx + boxW > canvas._logicalW - 4) bx = p.x - boxW - 16;
+  if (by < 4) by = p.y + 16;
+  // 连接线
+  ctx.strokeStyle = '#eab308';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y); ctx.lineTo(bx + (bx > p.x ? 0 : boxW), by + boxH / 2);
+  ctx.stroke();
+  // 背景
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.strokeStyle = '#eab308';
+  ctx.lineWidth = 1;
+  const radius = 5;
+  ctx.beginPath();
+  ctx.moveTo(bx + radius, by);
+  ctx.lineTo(bx + boxW - radius, by);
+  ctx.quadraticCurveTo(bx + boxW, by, bx + boxW, by + radius);
+  ctx.lineTo(bx + boxW, by + boxH - radius);
+  ctx.quadraticCurveTo(bx + boxW, by + boxH, bx + boxW - radius, by + boxH);
+  ctx.lineTo(bx + radius, by + boxH);
+  ctx.quadraticCurveTo(bx, by + boxH, bx, by + boxH - radius);
+  ctx.lineTo(bx, by + radius);
+  ctx.quadraticCurveTo(bx, by, bx + radius, by);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // 文字
+  ctx.fillStyle = '#3d2817';
+  lines.forEach((l, i) => {
+    ctx.fillStyle = i === 0 ? '#dc2626' : '#3d2817';
+    ctx.font = i === 0 ? 'bold 12px sans-serif' : '11px sans-serif';
+    ctx.fillText(l, bx + padX, by + padY + (i + 1) * lineH - 4);
+  });
+}
+
+// 绘制小十字中心点
+function drawCenterCross(sx, sy, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  const r = 4;
+  ctx.beginPath();
+  ctx.moveTo(sx - r, sy); ctx.lineTo(sx + r, sy);
+  ctx.moveTo(sx, sy - r); ctx.lineTo(sx, sy + r);
+  ctx.stroke();
+}
+
+function drawAreas() {
+  areas.forEach((a, idx) => {
+    if (a.visible === false) return; // 单个图形被隐藏则跳过
+    const color = a.shape === 'rectangle' ? '#f59e0b' : '#8b5cf6';
+    const theta = milToRad(a.mil);
+    // 纵深方向单位向量（与角度平行）
+    const dLenX = Math.cos(theta);
+    const dLenY = Math.sin(theta);
+    // 正面方向单位向量（与角度垂直）
+    const fLenX = -dLenY;
+    const fLenY = dLenX;
+
+    if (a.shape === 'rectangle') {
+      // 矩形：正面⊥角度，纵深∥角度
+      const fx = fLenX * a.front / 2;
+      const fy = fLenY * a.front / 2;
+      const dx = dLenX * a.depth / 2;
+      const dy = dLenY * a.depth / 2;
+      const p1 = worldToScreen(a.cx + fx + dx, a.cy + fy + dy);
+      const p2 = worldToScreen(a.cx + fx - dx, a.cy + fy - dy);
+      const p3 = worldToScreen(a.cx - fx - dx, a.cy - fy - dy);
+      const p4 = worldToScreen(a.cx - fx + dx, a.cy - fy + dy);
+
+      ctx.fillStyle = color + '30';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 纵深方向箭头
+      const arrowStart = worldToScreen(a.cx, a.cy);
+      const arrowEnd = worldToScreen(a.cx + dLenX * a.depth * 0.6, a.cy + dLenY * a.depth * 0.6);
+      drawArrow(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y, '#dc2626');
+
+      // 小十字中心点
+      drawCenterCross(arrowStart.x, arrowStart.y, color);
+
+      ctx.fillStyle = color;
+      ctx.font = '10px sans-serif';
+      ctx.fillText(`#${idx + 1} ${a.front}×${a.depth}`, p1.x + 3, p1.y - 3);
+    } else {
+      // 椭圆：长轴=正面（⊥角度），短轴=纵深（∥角度）
+      const center = worldToScreen(a.cx, a.cy);
+      // 正面方向旋转角推导：
+      // 世界正面方向=(fLenX,fLenY)=(-sinθ,cosθ)
+      // 屏幕方向=(fLenY,-fLenX)=(cosθ,sinθ)
+      // Canvas旋转φ使+X轴指向屏幕正面方向：φ=atan2(sinθ,cosθ)=θ
+      const rot = theta;
+      // 长轴=正面/2（屏幕像素），短轴=纵深/2
+      const rX = a.front / 2 * view.scale;
+      const rY = a.depth / 2 * view.scale;
+
+      ctx.fillStyle = color + '30';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(center.x, center.y, rX, rY, rot, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 纵深方向箭头（短轴方向）
+      const arrowEnd = worldToScreen(a.cx + dLenX * a.depth * 0.5, a.cy + dLenY * a.depth * 0.5);
+      drawArrow(center.x, center.y, arrowEnd.x, arrowEnd.y, '#dc2626');
+
+      // 小十字中心点
+      drawCenterCross(center.x, center.y, color);
+
+      ctx.fillStyle = color;
+      ctx.font = '10px sans-serif';
+      ctx.fillText(`#${idx + 1} ${a.front}×${a.depth}`, center.x + rX + 2, center.y - rY - 2);
+    }
+  });
+}
+
+// ================== 6. 视图控制 ==================
+function centerOnWorld(wx, wy) {
+  // 将画布平移，使世界坐标(wx, wy)位于屏幕中心
+  const cx = canvas._logicalW / 2;
+  const cy = canvas._logicalH / 2;
+  // worldToScreen: sx = cx + offsetX + wy*scale
+  // 为使 sx = cx: offsetX = -wy*scale
+  // sy = cy + offsetY - wx*scale
+  // 为使 sy = cy: offsetY = wx*scale
+  view.offsetX = -wy * view.scale;
+  view.offsetY = wx * view.scale;
+  document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+}
+
+function selectArea(id) {
+  const a = areas.find(x => x.id === id);
+  if (!a) return;
+  centerOnWorld(a.cx, a.cy);
+  showToast(`已选中区域 #${id}`, 'info');
+  renderAll();
+}
+
+function zoomIn() { view.scale *= 1.25; document.getElementById('zoomLevel').value = Math.round(view.scale * 100); renderAll(); }
+function zoomOut() { view.scale /= 1.25; document.getElementById('zoomLevel').value = Math.round(view.scale * 100); renderAll(); }
+function setZoom(v) { view.scale = Math.max(0.01, (parseFloat(v) || 100) / 100); renderAll(); }
+
+// 将视图自适应到指定世界坐标范围，并居中显示
+function fitToBounds(minX, maxX, minY, maxY) {
+  if (minX > maxX || minY > maxY) return;
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const rangeX = (maxX - minX) || 100, rangeY = (maxY - minY) || 100;
+  const margin = 1.4;
+  const sx = canvas._logicalW / (rangeX * margin);
+  const sy = canvas._logicalH / (rangeY * margin);
+  view.scale = Math.max(0.01, Math.min(sx, sy));
+  // 居中：让世界中心 (cx, cy) 落在屏幕中央
+  view.offsetX = -cy * view.scale;
+  view.offsetY = cx * view.scale;
+}
+
+function resetView() {
+  if (coordinates.length || areas.length) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    coordinates.forEach(c => {
+      if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+      if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+    });
+    areas.forEach(a => {
+      const r = Math.max(a.front, a.depth);
+      if (a.cx - r < minX) minX = a.cx - r; if (a.cx + r > maxX) maxX = a.cx + r;
+      if (a.cy - r < minY) minY = a.cy - r; if (a.cy + r > maxY) maxY = a.cy + r;
+    });
+    if (minX !== Infinity) {
+      fitToBounds(minX, maxX, minY, maxY);
+    }
+  } else {
+    view.scale = 1; view.offsetX = 0; view.offsetY = 0;
+  }
+  document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+  renderAll();
+}
+function clearCanvasAll() {
+  if (!confirm('确认清空画布上的所有内容（包括区域和坐标显示状态）？')) return;
+  areas = [];
+  coordinates = [];
+  averages.clear();
+  selectedCoordIds.clear();
+  tags.clear();
+  activeTags.clear();
+  showAreas = true;
+  updateToggleAreasBtn();
+  renderAreaList();
+  renderAvgResults();
+  refreshAll();
+  showToast('画布已清空', 'info');
+}
+
+// 保存高清图片：使用2倍分辨率渲染，确保导出高清画面
+function saveImage() {
+  const wasGridChecked = document.getElementById('showGrid').checked;
+  // 临时强制开启网格渲染
+  renderAll(true);
+
+  // 高清渲染：创建2倍分辨率的离屏画布
+  const scale = 2;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = canvas._logicalW * scale;
+  offCanvas.height = canvas._logicalH * scale;
+  const offCtx = offCanvas.getContext('2d');
+
+  // 填充背景色
+  offCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#fffcf5';
+  offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+
+  // 将当前画布内容缩放绘制到离屏画布
+  offCtx.drawImage(canvas, 0, 0, offCanvas.width, offCanvas.height);
+
+  const dataURL = offCanvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = `坐标图_HD_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // 恢复用户原来的网格显示状态
+  if (!wasGridChecked) renderAll();
+  showToast('高清图片已保存（2倍分辨率）');
+}
+
+// ================== 7. 鼠标/触摸交互 ==================
+function onPointerDown(clientX, clientY) {
+  isDragging = true;
+  dragMoved = false;
+  const rect = canvas.getBoundingClientRect();
+  dragStart = {
+    x: clientX - rect.left,
+    y: clientY - rect.top,
+    vx: view.offsetX,
+    vy: view.offsetY
+  };
+}
+function onPointerMove(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = clientX - rect.left;
+  const my = clientY - rect.top;
+  if (isDragging) {
+    const dx = mx - dragStart.x;
+    const dy = my - dragStart.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
+    view.offsetX = dragStart.vx + dx;
+    view.offsetY = dragStart.vy + dy;
+    renderAll();
+  }
+  if (mx >= 0 && my >= 0 && mx <= canvas._logicalW && my <= canvas._logicalH) {
+    const w = screenToWorld(mx, my);
+    document.getElementById('statusRight').textContent =
+      `缩放: ${Math.round(view.scale * 100)}% | 鼠标: (X=${formatNum(w.x)}, Y=${formatNum(w.y)})`;
+  }
+}
+function onPointerUp(clientX, clientY) {
+  if (isDragging && !dragMoved) {
+    // 点击选择最近点（仅当坐标显示在图上时才可选）
+    if (!showCoordOnMap) { isDragging = false; return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+    let best = null, bestDist = 16 * 16;
+    coordinates.forEach(c => {
+      if (!coordVisible(c)) return; // 不显示的点不可选中
+      const p = worldToScreen(c.x, c.y);
+      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+      if (d < bestDist) { bestDist = d; best = c; }
+    });
+    if (best) {
+      // 多选：通过 selectCoord 切换选中状态
+      const row = document.querySelector(`#coordListWrap tr[data-cid="${best.id}"]`);
+      selectCoord(best.id, row);
+    }
+  }
+  isDragging = false;
+}
+
+canvas.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY));
+window.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', e => onPointerUp(e.clientX, e.clientY));
+
+// 触摸事件（移动端）
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    e.preventDefault();
+    onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 1) {
+    e.preventDefault();
+    onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  if (e.changedTouches.length === 1) {
+    onPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }
+}, { passive: false });
+
+// 滚轮缩放
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const before = screenToWorld(mx, my);
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  view.scale *= factor;
+  view.scale = Math.max(0.01, Math.min(1000, view.scale));
+  const after = screenToWorld(mx, my);
+  view.offsetX += (after.y - before.y) * view.scale;
+  view.offsetY -= (after.x - before.x) * view.scale;
+  document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+  renderAll();
+}, { passive: false });
+
+// 双指缩放（移动端）：基于双指中点缩放，避免画布偏移
+let pinchDist = 0;
+let pinchMid = { x: 0, y: 0 };
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    pinchDist = Math.sqrt(dx * dx + dy * dy);
+    const rect = canvas.getBoundingClientRect();
+    pinchMid = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+    };
+    isDragging = false;
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const newDist = Math.sqrt(dx * dx + dy * dy);
+    if (pinchDist > 0) {
+      const factor = newDist / pinchDist;
+      // 基于双指中点缩放：先记录中点对应的世界坐标，缩放后补偿偏移
+      const before = screenToWorld(pinchMid.x, pinchMid.y);
+      view.scale *= factor;
+      view.scale = Math.max(0.01, Math.min(1000, view.scale));
+      const after = screenToWorld(pinchMid.x, pinchMid.y);
+      view.offsetX += (after.y - before.y) * view.scale;
+      view.offsetY -= (after.x - before.x) * view.scale;
+      document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+      renderAll();
+    }
+    pinchDist = newDist;
+  }
+}, { passive: false });
+
+function renderLegend() {
+  const bar = document.getElementById('legendBar');
+  if (!tags.size && !areas.length) { bar.innerHTML = ''; return; }
+
+  // 标签图例（可点击筛选）
+  let html = [...tags.entries()].map(([t, c]) => {
+    const active = activeTags.has(t);
+    const style = active
+      ? `background:${c};color:#fff;border-color:${c};box-shadow:0 2px 6px ${c}80;`
+      : `color:var(--text-muted);`;
+    return `<div class="legend-item legend-clickable${active?' legend-active':''}" style="${style}" onclick="toggleLegendTag('${t.replace(/'/g,"\\'")}')" title="点击筛选此标签的坐标并居中显示">${active?'✓ ':''}<span class="tag-dot" style="background:${active?'#fff':c}"></span>${t}</div>`;
+  }).join('');
+
+  // 区域图例（可点击居中）
+  if (areas.length) {
+    if (html) html += '<span style="color:var(--border);">|</span>';
+    areas.forEach((a, i) => {
+      const color = a.shape === 'rectangle' ? 'var(--accent)' : '#8b5cf6';
+      const icon = a.shape === 'rectangle' ? '■' : '●';
+      html += `<div class="legend-item legend-clickable" style="color:${color};" onclick="toggleLegendArea(${a.id})" title="点击居中显示此区域">${icon} ${a.shape==='rectangle'?'矩形':'椭圆'}${i+1}</div>`;
+    });
+  }
+
+  // 平均点图例（仅显示，不可点击）
+  if (averages.size) {
+    html += `<div class="legend-item" style="color:var(--success);">+ 平均点</div>`;
+  }
+
+  bar.innerHTML = html;
+}
+
+// 图例点击：筛选标签并居中显示
+function toggleLegendTag(t) {
+  if (activeTags.has(t)) {
+    activeTags.delete(t);
+  } else {
+    activeTags.add(t);
+    // 选中标签时，自动解锁包含该标签的所有坐标（与侧栏 toggleTag 行为一致）
+    coordinates.forEach(c => {
+      if (c.tags && c.tags.includes(t) && c.visible === false) {
+        c.visible = true;
+      }
+    });
+  }
+
+  // 居中显示当前筛选出的所有点
+  if (activeTags.size) {
+    const pts = coordinates.filter(c => c.tags.some(tg => activeTags.has(tg)));
+    if (pts.length) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      pts.forEach(c => {
+        if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+        if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+      });
+      fitToBounds(minX, maxX, minY, maxY);
+    }
+  }
+
+  refreshAll({ tag: false, judge: false });
+}
+
+// 图例点击：居中显示指定区域
+function toggleLegendArea(id) {
+  const a = areas.find(x => x.id === id);
+  if (!a) return;
+  // 自适应到该区域范围
+  const r = Math.max(a.front, a.depth) / 2 + 50;
+  fitToBounds(a.cx - r, a.cx + r, a.cy - r, a.cy + r);
+  document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+  showToast(`已居中显示：${a.shape==='rectangle'?'矩形':'椭圆'}`, 'info');
+  renderAll();
+}
+
+function updateStatusRight() {
+  const count = activeTags.size
+    ? coordinates.filter(c => c.tags.some(t => activeTags.has(t)) && c.visible).length
+    : coordinates.filter(c => c.visible).length;
+  document.getElementById('statusLeft').textContent =
+    `坐标 ${count}/${coordinates.length} 个 | 区域 ${areas.length} 个 | 平均 ${averages.size} 组`;
+}
+
+// ================== 帮助提示系统 ==================
+const HELP_CONTENTS = {
+  'coord-input': {
+    title: '📌 坐标录入 - 使用说明',
+    body: `
+      <h5>一、功能概述</h5>
+      <p>本模块提供 <strong>5种坐标录入方式</strong>，支持多种测绘常用的坐标输入方法，可一次性或批量录入坐标点数据。</p>
+
+      <h5>二、录入方式说明</h5>
+      <ol>
+        <li><strong>坐标（直接输入）</strong>
+          <ul>
+            <li>输入：X坐标、Y坐标、H(高度，可选)</li>
+            <li>适用：已知精确坐标值的场景</li>
+          </ul>
+        </li>
+        <li><strong>单偏（偏差法）</strong>
+          <ul>
+            <li>输入：G点(Gx,Gy,Gh)、M点(Mx,My,Mh)、距离偏差△D、方向偏差△F(密位)、高低偏差△E</li>
+            <li>原理：先算G→M方位角A，目标方位Agz=A+△F，目标距离Dgz=Dgm+△D</li>
+            <li>输出：目标点x,y及高程 h≈Mh+△E·Dgm</li>
+            <li>可先点「📐 计算坐标」预览结果再录入</li>
+          </ul>
+        </li>
+        <li><strong>单G（极坐标法）</strong>
+          <ul>
+            <li>输入：G点(Gx,Gy,Gh)、基准J(密位)、距离D、方向F(密位)、高度角E(默认0)</li>
+            <li>原理：方位角 A = J + 3000 − F（密位），h = Gh + E·D/1000·0.95</li>
+            <li>特点：Gx/Gy/Gh/J 会被记忆，便于连续录入同基准下多点</li>
+          </ul>
+        </li>
+        <li><strong>文本（粘贴导入）</strong>
+          <ul>
+            <li>格式：<code>编号  X  Y  H  标签  时间戳  屏蔽</code>（Tab分隔）</li>
+            <li>缺失默认：时间=当前时间，标签=「未分类」，屏蔽=0</li>
+            <li>#开头为注释行；重复数据自动跳过</li>
+            <li>若顶部「时间/标签」栏有设置，则<strong>以顶部设置覆盖原数据</strong></li>
+          </ul>
+        </li>
+        <li><strong>文件（TXT导入）</strong>
+          <ul>
+            <li>支持本工具「导出全部/导出选中」生成的 .txt 文件</li>
+            <li>同「文本」规则：覆盖、默认值、去重均一致</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h5>三、公共字段</h5>
+      <ul>
+        <li><strong>时间</strong>：默认当前时间并自动每秒刷新，手动编辑后停止刷新</li>
+        <li><strong>标签</strong>：勾选已有标签复选框 或 在「新标签」输入框用逗号分隔添加，未设置时默认「未分类」</li>
+        <li><strong>屏蔽</strong>：导入值为1时该坐标初始为隐藏状态</li>
+      </ul>
+
+      <h5>四、操作步骤</h5>
+      <ol>
+        <li>点击顶端 5 个按钮切换录入方式</li>
+        <li>按对应方式输入坐标参数</li>
+        <li>（可选）在「时间」栏修改时间，在「标签」区勾选/输入标签</li>
+        <li>点击「➕ 添加坐标」完成录入</li>
+        <li>重复以上步骤继续录入下一点</li>
+      </ol>
+    `,
+  },
+  'coord-list': {
+    title: '📋 坐标列表 - 使用说明',
+    body: `
+      <h5>一、功能概述</h5>
+      <p>展示所有已录入的坐标点，支持 <strong>查看、多选、显示/屏蔽、编辑标签、删除、导出</strong> 等操作。</p>
+
+      <h5>二、列表列说明</h5>
+      <ul>
+        <li><strong>#</strong>：编号 + 时间戳（小字显示）</li>
+        <li><strong>X / Y</strong>：世界坐标值</li>
+        <li><strong>H</strong>：高度，未设置显示「-」</li>
+        <li><strong>标签</strong>：多个标签用「/」分隔</li>
+        <li><strong>显示/编辑</strong>：含3个操作按钮
+          <ul>
+            <li>◉ 显示中（绿）/ ◌ 已屏蔽（灰）：<em>单击切换屏蔽状态</em>，屏蔽后不在图中显示且不参与平均值计算</li>
+            <li>✎ 编辑标签：弹出对话框可修改该点标签，多个标签用逗号分隔</li>
+            <li>× 删除：永久删除该坐标点</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h5>三、多选操作</h5>
+      <ul>
+        <li><strong>单击行</strong>：选中 / 取消选中（支持多选），选中行变为红色背景</li>
+        <li>选中某点后：<em>画布自动居中到该点</em>，并显示详细信息气泡</li>
+      </ul>
+
+      <h5>四、底部按钮</h5>
+      <ul>
+        <li><strong>🗑 清空</strong>：删除所有坐标（含标签、平均值），需二次确认</li>
+        <li><strong>📦 示例</strong>：一键生成 8~12 个测试坐标，便于体验功能</li>
+        <li><strong>📤 导出选中</strong>：仅导出当前选中行的坐标为 TXT</li>
+        <li><strong>📤 导出全部</strong>：导出全部坐标为 TXT</li>
+      </ul>
+
+      <h5>五、导出TXT格式</h5>
+      <p>每行使用 Tab 分隔：<code>编号  X  Y  H  标签  时间戳  屏蔽(0/1)</code></p>
+      <p>文件名默认：<code>YYYYMMDD_坐标N个.txt</code>，可再次导入使用</p>
+    `,
+  },
+  'tag-filter': {
+    title: '🏷 标签筛选与分类 - 使用说明',
+    body: `
+      <h5>一、功能概述</h5>
+      <p>按标签筛选显示坐标点，并计算各标签下坐标点的 <strong>平均位置</strong>（中心点）。</p>
+
+      <h5>二、标签筛选区</h5>
+      <ul>
+        <li>每个标签为一个「胶囊」按钮，<em>彩色边框 + 勾选</em> 表示激活</li>
+        <li>括号中数字：该标签下 <strong>未被屏蔽</strong> 的坐标数量</li>
+        <li>点击标签可 <strong>多选</strong>，显示所有 <em>包含任一激活标签</em> 的坐标</li>
+        <li>选中某标签时：<em>自动将该标签下被屏蔽的坐标全部解除屏蔽</em></li>
+      </ul>
+
+      <h5>三、操作按钮</h5>
+      <ul>
+        <li><strong>📊 计算平均位置</strong>：对当前激活标签逐一计算平均坐标 X̅、Ȳ、H̅
+          <ul>
+            <li>结果显示：「n个点中的m个」= 该标签共 n 点，其中未屏蔽参与计算的 m 点</li>
+            <li>图中以 <strong>+ 十字标记</strong> 显示平均点，颜色对应标签色</li>
+            <li>⚠️ <em>当所有坐标被删除后，下方平均位置列表会自动清空</em></li>
+          </ul>
+        </li>
+        <li><strong>🎯 显示/隐藏坐标</strong>：一键切换是否在画布上绘制坐标点（平均点和区域不受影响）</li>
+      </ul>
+
+      <h5>四、平均位置隐藏按钮</h5>
+      <ul>
+        <li>每行平均结果右上角有「◉ 隐藏 / ◌ 显示」按钮，<em>仅控制单个平均点的可见性</em></li>
+        <li>隐藏后：该行文字变淡，图中十字标记消失；再次点击恢复</li>
+        <li>「隐藏/显示」后保留解释文字，便于了解该平均值信息</li>
+      </ul>
+
+      <h5>五、与图例联动</h5>
+      <p>画布顶部图例区的标签也可点击筛选，并会 <strong>自动居中</strong> 显示该标签下所有点。</p>
+    `,
+  },
+  'draw-area': {
+    title: '🔲 绘制区域 - 使用说明',
+    body: `
+      <h5>一、功能概述</h5>
+      <p>在画布上绘制 <strong>矩形 / 椭圆形</strong> 区域，用于后续判断某坐标点是否落在区域内、边缘或外部。</p>
+
+      <h5>二、输入参数</h5>
+      <ul>
+        <li><strong>中心X / 中心Y</strong>：区域中心点世界坐标（必填）</li>
+        <li><strong>形状</strong>：矩形 / 椭圆形（下拉选择）</li>
+        <li><strong>正面 / 纵深</strong>
+          <ul>
+            <li>矩形：正面=宽（⊥角度方向），纵深=长（∥角度方向）</li>
+            <li>椭圆：正面=长轴长度（⊥角度方向），纵深=短轴长度（∥角度方向）</li>
+          </ul>
+        </li>
+        <li><strong>角度（密位）</strong>：区域纵深方向与正北(X轴正向)夹角，0~6000密位 = 0~360°</li>
+      </ul>
+
+      <h5>三、密位换算提示</h5>
+      <p>公式：<code>密位 = 顺时针角度(°) ÷ 360 × 6000</code></p>
+      <p>例：90° = 1500密位，180° = 3000密位，270° = 4500密位</p>
+
+      <h5>四、操作按钮</h5>
+      <ul>
+        <li><strong>✏ 绘制区域</strong>：按参数新增一个区域</li>
+        <li><strong>🧹 清除区域</strong>：一次性删除所有区域</li>
+        <li><strong>👁 隐藏/显示图形</strong>：全局开关，隐藏/恢复所有区域绘制</li>
+      </ul>
+
+      <h5>五、区域列表操作</h5>
+      <ul>
+        <li>列表项显示：形状编号 + 中心坐标 + 尺寸 + 角度</li>
+        <li>单击列表项：<em>画布居中到该区域</em></li>
+        <li>◉/◌ 按钮：单个区域显示/隐藏切换</li>
+        <li>× 按钮：删除该单个区域</li>
+      </ul>
+
+      <h5>六、绘制说明</h5>
+      <ul>
+        <li>区域形状均带半透明填充色 + 描边，并标注编号与尺寸</li>
+        <li>纵深方向用红色箭头指示；中心点用小十字标记</li>
+        <li>图例区可点击「矩形/椭圆N」快速居中该区域</li>
+      </ul>
+    `,
+  },
+  'point-judge': {
+    title: '📐 点位判断 - 使用说明',
+    body: `
+      <h5>一、功能概述</h5>
+      <p>判断某个 <strong>坐标点</strong> 相对某个 <strong>绘制区域</strong> 的位置关系：<em>区域内 / 区域边缘上 / 区域外</em>，并显示到中心的距离。</p>
+
+      <h5>二、输入参数</h5>
+      <ul>
+        <li><strong>选择点</strong>：下拉选择坐标列表中已存在的任意一点（格式：#编号 (X,Y) [标签]）</li>
+        <li><strong>选择图形</strong>：下拉选择「绘制区域」模块中已创建的任意区域</li>
+      </ul>
+
+      <h5>三、判定结果说明</h5>
+      <ul>
+        <li><span style="color:#16a34a">✅ 点在图形内</span>
+          <p>点坐标严格位于矩形/椭圆内部（边界以内），背景为绿色调</p>
+        </li>
+        <li><span style="color:#f59e0b">🔶 点在图形边缘上</span>
+          <p>点恰好落在边界上（浮点误差 1e-9 容差），常用于临界位置判定，背景为橙色调</p>
+        </li>
+        <li><span style="color:#e11d48">❌ 点在图形外</span>
+          <p>点坐标位于区域外部，背景为红色调</p>
+        </li>
+      </ul>
+
+      <h5>四、附加信息</h5>
+      <ul>
+        <li>点编号、坐标 (X,Y)、高度 H</li>
+        <li>区域形状、中心点、尺寸、旋转角</li>
+        <li>点到区域中心的 <strong>直线距离</strong>（保留 2 位小数）</li>
+      </ul>
+
+      <h5>五、操作步骤</h5>
+      <ol>
+        <li>确保「坐标列表」中至少存在 1 个坐标点（可点「示例」生成）</li>
+        <li>确保「绘制区域」模块中至少创建了 1 个矩形或椭圆</li>
+        <li>在本模块下拉中选择 <em>要判断的点</em> 和 <em>参考区域</em>（切换任一即自动判定）</li>
+        <li>或点击「🔍 判断是否在图形内」手动触发</li>
+        <li>结果会自动高亮该点（加入多选）并在画布中居中显示</li>
+      </ol>
+    `,
+  },
+};
+
+function showHelp(key) {
+  const item = HELP_CONTENTS[key];
+  if (!item) return;
+  document.getElementById('helpTitle').textContent = item.title;
+  document.getElementById('helpBody').innerHTML = item.body;
+  document.getElementById('helpModalMask').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHelp() {
+  document.getElementById('helpModalMask').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// ESC 关闭弹窗
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeHelp();
+});
+
+// ================== 移动端侧边栏切换 ==================
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+
+// ================== 初始化 ==================
+window.addEventListener('resize', () => {
+  renderAll();
+});
+window.addEventListener('load', () => {
+  resizeCanvas();
+  view.scale = 1.2;
+  document.getElementById('zoomLevel').value = Math.round(view.scale * 100);
+  // 设置时间戳默认值为当前时间
+  document.getElementById('inputTime').value = formatDatetimeLocal(new Date());
+  // 初始化绘制区域的输入框显示（保证与下拉框一致）
+  onShapeChange();
+  // 初始化图形显示/隐藏按钮文字
+  updateToggleAreasBtn();
+  // 全面刷新所有动态区域，清除浏览器可能恢复的历史DOM
+  refreshAll();
+  // 时间戳自动更新（每秒刷新，用户手动编辑时不覆盖）
+  setInterval(() => {
+    const el = document.getElementById('inputTime');
+    if (el && document.activeElement !== el) {
+      el.value = formatDatetimeLocal(new Date());
+    }
+  }, 1000);
+});
+</script>
+
+
+
+
+
+
+
+
+</body></html>
