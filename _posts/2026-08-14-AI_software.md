@@ -3,8 +3,8 @@ layout: post
 title: "AI编程尝试-TRAE"
 date:   2026-8-14
 tags: 
- -学习
- -AI
+ - 学习
+ - AI
 comments: true
 author: JoneY
 ---
