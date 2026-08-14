@@ -2,7 +2,7 @@
 layout: post
 title: "AI编程尝试-TRAE"
 date:   2026-8-14
-tags: [学习]
+tags: [学习],[AI]
 comments: true
 author: JoneY
 ---
@@ -10,9 +10,14 @@ author: JoneY
 
 <!-- more -->
 # 利用Trae尝试开发的几个静态HTML应用
+以下尝试均采用静态HTML实现，可以保存到本地运行。
 
-## 坐标记录和筛选
-通过一个静态的前端网页实现坐标记录和筛选的功能。
+## 坐标记录和分析
+通过一个静态的前端静态HTML网页实现坐标记录和分析的功能：
+1、多种方式录入坐标，支持导入导出；
+2、坐标分析，平均、标签筛选与分类；
+3、区域绘制；
+4、点位判断。
 
 链接：[坐标记录与分析] <https://zhoushiyang12.github.io/other-file/coordinate_analyzer.html>
 
@@ -26,12 +31,9 @@ author: JoneY
 
 为满足日常工作需要，使用静态HTML开发此软件实现：
 
-1、图解法；
-
+1、图解法，距离、角度量算；
 2、几种基本计算：
-
 3、随机出题。
-
 链接：[教学工具箱]  <https://zhoushiyang12.github.io/other-file/Teach_tools.html>
 
 ## 抽签小游戏
