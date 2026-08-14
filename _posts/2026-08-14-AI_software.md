@@ -32,8 +32,11 @@ author: JoneY
 为满足日常工作需要，使用静态HTML开发此软件实现：
 
 1、图解法，距离、角度量算；
+
 2、几种基本计算：
+
 3、随机出题。
+
 链接：[教学工具箱]  <https://zhoushiyang12.github.io/other-file/Teach_tools.html>
 
 ## 抽签小游戏
