@@ -9,8 +9,11 @@ comments: true
 author: JoneY
 ---
 上次尝试了Trae之后，这次又尝试了一下WorkBuddy（手机端）。总体感觉WorkBuddy交付的结果更好，但速度慢（近10分钟返回一次结果），给的免费额度太少，免费额度下只够开发了一个“笑脸墙程序”，一个月免费500*消耗的也很快；之前试Trae返回结果更快（2_3分钟），便于多次迭代。
+<!-- more -->
 
 下面是我用WorkBuddy开发的，用于在大屏幕展示企业、班级笑脸墙的程序（单机使用Html5），可以直接保存到本地单机使用。
+
+链接：[笑脸墙] <https://zhoushiyang12.github.io/other-file/笑脸墙V3.3.3.html>
 
 # 笑脸墙
 
